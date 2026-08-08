@@ -7,6 +7,37 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_KEY
 );
 
+// ─── Theme ───────────────────────────────────────────────────────────────────
+// Per-user, stored in localStorage. `data-theme` on <html> drives the token
+// overrides in index.css; the value is applied before React mounts (see
+// main.jsx) so there is no flash of the wrong theme on load.
+const THEME_KEY = "ev_theme";
+const readTheme = () => (localStorage.getItem(THEME_KEY) === "light" ? "light" : "dark");
+const applyTheme = (theme) => {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem(THEME_KEY, theme);
+};
+
+function useTheme() {
+  const [theme, setTheme] = useState(readTheme);
+  useEffect(() => { applyTheme(theme); }, [theme]);
+  return [theme, () => setTheme(t => (t === "dark" ? "light" : "dark"))];
+}
+
+function ThemeToggle({ theme, onToggle, compact = false }) {
+  const isDark = theme === "dark";
+  return (
+    <button
+      onClick={onToggle}
+      className="ev-theme-toggle"
+      title={isDark ? "Comută pe tema deschisă" : "Comută pe tema închisă"}
+      aria-label={isDark ? "Comută pe tema deschisă" : "Comută pe tema închisă"}
+      style={compact ? undefined : { minWidth: 34 }}>
+      <span aria-hidden="true">{isDark ? "☀" : "☾"}</span>
+    </button>
+  );
+}
+
 let _actorDisplayName = "";
 // Server-issued session token for nickname accounts (admin2/member).
 // General Admin uses a real Supabase JWT instead and leaves this null.
@@ -56,29 +87,34 @@ const normalizeSystemKey = key => (key === LEGACY_SALA_SPORT_KEY ? SALA_SPORT_KE
 // photo of their own; an uploaded photo always wins.
 const SALA_SPORT_AVATAR = "/sala-sport-avatar.jpg";
 
+// Rank visuals come from CSS custom properties (see index.css) so the whole
+// ladder re-themes with the rest of the app instead of being pinned to dark.
+const rankStyle = (prefix, i, rankKey) => ({
+  bg:        `var(--rank-${prefix}${i}-bg)`,
+  border:    `var(--rank-${prefix}${i}-bd)`,
+  shadow:    `var(--rank-${prefix}${i}-sh)`,
+  nameColor: `var(--rank-${prefix}${i}-tx)`,
+  nameGlow:  `var(--rank-${prefix}${i}-gl)`,
+  ...(rankKey ? { rankKey } : {}),
+});
+
 const ALDRICK_RANK_STYLES = [
-  { bg:"#0a0804", border:"#1e120a", shadow:"none", nameColor:"#4a3828" },
-  { bg:"#0c0a06", border:"#2a1c0a", shadow:"none", nameColor:"#685030" },
-  { bg:"#0e0b05", border:"#3a240a", shadow:"none", nameColor:"#856040" },
-  { bg:"#100c04", border:"#5a3a10", shadow:"0 0 8px rgba(120,80,20,0.22)", nameColor:"#a07030", nameGlow:"0 0 6px rgba(160,112,48,0.4)" },
-  { bg:"#120905", border:"#803015", shadow:"0 0 10px rgba(180,60,20,0.28)", nameColor:"#c06030", nameGlow:"0 0 7px rgba(200,80,30,0.4)" },
-  { bg:"#130a02", border:"#9a5c10", shadow:"0 0 13px rgba(180,110,20,0.35)", nameColor:"#d08020", nameGlow:"0 0 8px rgba(210,130,30,0.45)" },
-  { bg:"linear-gradient(135deg,#130d00 0%,#201600 100%)", border:"#c08818", shadow:"0 0 18px rgba(210,140,24,0.45),0 0 36px rgba(210,140,24,0.15)", nameColor:"#e0a830", nameGlow:"0 0 10px rgba(224,168,48,0.55)", rankKey:"aldrick-hc" },
-  { bg:"linear-gradient(135deg,#1c1400 0%,#2e2000 50%,#1c1400 100%)", border:"#d4a420", shadow:"0 0 24px rgba(225,165,32,0.55),0 0 48px rgba(225,165,32,0.22)", nameColor:"#f0c840", nameGlow:"0 0 13px rgba(245,200,60,0.65)", rankKey:"aldrick-underboss" },
-  { bg:"linear-gradient(135deg,#201600 0%,#3c2800 30%,#201600 70%,#120e00 100%)", border:"#f5c830", shadow:"0 0 38px rgba(255,195,30,0.65),0 0 75px rgba(255,195,30,0.28),inset 0 0 30px rgba(255,200,0,0.04)", nameColor:"#ffe040", nameGlow:"0 0 18px rgba(255,210,0,0.85),0 0 36px rgba(255,180,0,0.45)", rankKey:"aldrick-don" },
+  rankStyle("a", 1), rankStyle("a", 2), rankStyle("a", 3),
+  rankStyle("a", 4), rankStyle("a", 5), rankStyle("a", 6),
+  rankStyle("a", 7, "aldrick-hc"),
+  rankStyle("a", 8, "aldrick-underboss"),
+  rankStyle("a", 9, "aldrick-don"),
 ];
 
 const SICARIOS_RANK_STYLES = [
-  { bg:"#09070f", border:"#1e1235", shadow:"none", nameColor:"#4a3860" },
-  { bg:"#0c091a", border:"#301848", shadow:"none", nameColor:"#6a5080" },
-  { bg:"#0e0c1c", border:"#4a2a65", shadow:"0 0 6px rgba(90,50,130,0.22)", nameColor:"#8a6090", nameGlow:"0 0 5px rgba(130,80,160,0.35)" },
-  { bg:"linear-gradient(135deg,#0e0a1c 0%,#180e28 100%)", border:"#7050a8", shadow:"0 0 14px rgba(120,80,185,0.38),0 0 28px rgba(120,80,185,0.14)", nameColor:"#a875d0", nameGlow:"0 0 9px rgba(168,100,210,0.5)", rankKey:"sic-consigliere" },
-  { bg:"linear-gradient(135deg,#110a20 0%,#200e36 50%,#110a20 100%)", border:"#9865d8", shadow:"0 0 22px rgba(155,88,235,0.48),0 0 44px rgba(155,88,235,0.2)", nameColor:"#c88af8", nameGlow:"0 0 13px rgba(200,120,255,0.65)", rankKey:"sic-kingpin" },
+  rankStyle("s", 1), rankStyle("s", 2), rankStyle("s", 3),
+  rankStyle("s", 4, "sic-consigliere"),
+  rankStyle("s", 5, "sic-kingpin"),
 ];
 
 function getRankStyle(rankSystem, rank, ranks) {
   const system = normalizeSystemKey(rankSystem);
-  if (!system || system === SALA_SPORT_KEY) return { bg:"#0f0a1c", border:"#1a1426", shadow:"none", nameColor:"#e6def5" };
+  if (!system || system === SALA_SPORT_KEY) return { bg:"var(--surface-2)", border:"var(--border)", shadow:"none", nameColor:"var(--text)" };
   const idx = (ranks||[]).indexOf(rank);
   const safeIdx = Math.max(0, idx);
   if (system === "vendettas") {
@@ -102,8 +138,8 @@ const fmtConcediu = (m) => {
 };
 const STATUS_OPTIONS = ["Activ","Inactiv"];
 const TASK_OPTIONS = ["Platit","Neplatit","Scutit"];
-const STATUS_COLORS = { Activ:{bg:"#0d2218",text:"#4ade80",border:"#22c55e"}, Inactiv:{bg:"#1e1706",text:"#f87171",border:"#ef4444"} };
-const TASK_COLORS = { Platit:{bg:"#0d1e28",text:"#38bdf8",border:"#0ea5e9"}, Neplatit:{bg:"#1a1506",text:"#fb923c",border:"#f97316"}, Scutit:{bg:"#1a1506",text:"#b89028",border:"#c9a030"} };
+const STATUS_COLORS = { Activ:{bg:"var(--success-bg)",text:"var(--success)",border:"var(--success)"}, Inactiv:{bg:"var(--surface-hover)",text:"var(--danger)",border:"var(--danger)"} };
+const TASK_COLORS = { Platit:{bg:"var(--info-bg)",text:"var(--info)",border:"var(--info)"}, Neplatit:{bg:"var(--surface-3)",text:"var(--warn)",border:"var(--warn)"}, Scutit:{bg:"var(--surface-3)",text:"var(--gold-dim)",border:"var(--gold)"} };
 const LICENSE_DEFS = [
   { key:"hs_driver",   label:"HS DRIVER" },
   { key:"pilot_heli",  label:"PILOT HELI" },
@@ -129,9 +165,9 @@ function Lightbox({ src, onClose }) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
   return (
-    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.95)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, cursor:"zoom-out" }}>
-      <img src={src} alt="" style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:8, boxShadow:"0 0 60px rgba(0,0,0,0.8)", objectFit:"contain" }} onClick={e => e.stopPropagation()} />
-      <button onClick={onClose} style={{ position:"fixed", top:20, right:24, background:"transparent", border:"none", color:"#6a5218", fontSize:28, cursor:"pointer", lineHeight:1 }}>✕</button>
+    <div onClick={onClose} style={{ position:"fixed", inset:0, background:"var(--overlay)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, cursor:"zoom-out" }}>
+      <img src={src} alt="" style={{ maxWidth:"90vw", maxHeight:"90vh", borderRadius:8, boxShadow:"0 0 60px var(--overlay)", objectFit:"contain" }} onClick={e => e.stopPropagation()} />
+      <button onClick={onClose} style={{ position:"fixed", top:20, right:24, background:"transparent", border:"none", color:"var(--text-dim)", fontSize:28, cursor:"pointer", lineHeight:1 }}>✕</button>
     </div>
   );
 }
@@ -146,8 +182,8 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
   const [loading, setLoading] = useState(false);
 
   const inpStyle = {
-    background:"rgba(0,0,0,0.5)", border:"1px solid rgba(201,160,48,0.22)", borderRadius:3,
-    color:"#e8d8a0", fontFamily:"'Barlow', sans-serif", fontSize:14,
+    background:"var(--surface-3)", border:"1px solid var(--border-gold)", borderRadius:3,
+    color:"var(--gold-soft)", fontFamily:"'Barlow', sans-serif", fontSize:14,
     padding:"9px 14px", outline:"none", width:"100%", boxSizing:"border-box",
   };
 
@@ -168,49 +204,49 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
 
   const tabStyle = (active) => ({
     flex:1, background:"transparent", border:"none",
-    borderBottom: active ? "2px solid #c9a030" : "2px solid rgba(201,160,48,0.12)",
-    color: active ? "#e8c84a" : "#5a4210",
+    borderBottom: active ? "2px solid var(--gold)" : "2px solid var(--border-gold)",
+    color: active ? "var(--gold-soft)" : "var(--text-dim)",
     fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:11,
     padding:"10px 0", cursor:"pointer", letterSpacing:"0.10em",
   });
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.92)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(4px)" }}>
+    <div style={{ position:"fixed", inset:0, background:"var(--overlay)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(4px)" }}>
       <div className="ev-modal-frame">
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, marginBottom:4 }}>
           <img src={logoUrl} alt="Aldrick Enterprises" style={{ width:84, height:84, objectFit:"contain" }} />
           <div className="ev-gold-text" style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:14, letterSpacing:"0.16em", textAlign:"center" }}>ALDRICK ENTERPRISES</div>
         </div>
-        <div style={{ display:"flex", borderBottom:"1px solid rgba(201,160,48,0.15)", marginBottom:6 }}>
+        <div style={{ display:"flex", borderBottom:"1px solid var(--border-gold)", marginBottom:6 }}>
           <button style={tabStyle(mode==="account")} onClick={() => { setMode("account"); setError(""); }}>CONT MEMBRU / ADMIN 2</button>
           <button style={tabStyle(mode==="ga")} onClick={() => { setMode("ga"); setError(""); }}>GENERAL ADMIN</button>
         </div>
         {mode === "ga" ? (
           <>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email"
-              style={inpStyle} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="rgba(201,160,48,0.22)"} />
+              style={inpStyle} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Parolă"
               onKeyDown={e => e.key==="Enter" && submitGA()}
-              style={{ ...inpStyle, border:`1px solid ${error?"#ef4444":"rgba(201,160,48,0.22)"}` }}
-              onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor=error?"#ef4444":"rgba(201,160,48,0.22)"} />
+              style={{ ...inpStyle, border:`1px solid ${error?"var(--danger)":"var(--border-gold)"}` }}
+              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor=error?"var(--danger)":"var(--border-gold)"} />
           </>
         ) : (
           <>
             <input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Nickname"
-              style={inpStyle} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="rgba(201,160,48,0.22)"} />
+              style={inpStyle} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Parolă"
               onKeyDown={e => e.key==="Enter" && submitAccount()}
-              style={{ ...inpStyle, border:`1px solid ${error?"#ef4444":"rgba(201,160,48,0.22)"}` }}
-              onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor=error?"#ef4444":"rgba(201,160,48,0.22)"} />
+              style={{ ...inpStyle, border:`1px solid ${error?"var(--danger)":"var(--border-gold)"}` }}
+              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor=error?"var(--danger)":"var(--border-gold)"} />
           </>
         )}
-        {error && <div style={{ color:"#ef4444", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{error}</div>}
+        {error && <div style={{ color:"var(--danger)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{error}</div>}
         <div style={{ display:"flex", gap:8 }}>
           <button onClick={mode==="ga" ? submitGA : submitAccount} disabled={loading}
-            style={{ flex:1, background:"linear-gradient(180deg, #d4a832 0%, #7a5210 100%)", border:"1px solid rgba(201,160,48,0.35)", borderRadius:3, color:"#0c0802", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.08em" }}>
+            style={{ flex:1, background:"linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%)", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--on-gold)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.08em" }}>
             {loading ? "..." : "INTRĂ"}
           </button>
-          <button onClick={onClose} style={{ flex:1, background:"transparent", border:"1px solid rgba(201,160,48,0.15)", borderRadius:3, color:"#6a5218", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
+          <button onClick={onClose} style={{ flex:1, background:"transparent", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
         </div>
       </div>
     </div>
@@ -218,48 +254,52 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
 }
 
 // ─── Visitor Entry Gate ───────────────────────────────────────────────────────
-function EntryGate({ onEnter, onOpenLogin }) {
+function EntryGate({ onEnter, onOpenLogin, theme, onToggleTheme }) {
   const [nickname, setNickname] = useState("");
   const submit = () => { if (nickname.trim()) onEnter(nickname.trim()); };
   return (
-    <div style={{ minHeight:"100vh", background:"#050305", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 16px" }}>
+    <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 16px", position:"relative" }}>
+      <div style={{ position:"absolute", top:14, right:14, zIndex:2 }}>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+      </div>
+
       {/* Logo — large, centred */}
       <img src={logoUrl} alt="Aldrick Enterprises"
-        style={{ width:220, height:220, objectFit:"contain", marginBottom:8, filter:"drop-shadow(0 4px 40px rgba(201,160,48,0.18))" }} />
+        style={{ width:220, height:220, objectFit:"contain", marginBottom:8, filter:"drop-shadow(0 4px 40px var(--border-gold))" }} />
 
       {/* Title */}
-      <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:32, letterSpacing:"0.12em", textAlign:"center", marginBottom:4, color:"#c9a030" }}>
+      <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:32, letterSpacing:"0.12em", textAlign:"center", marginBottom:4, color:"var(--gold)" }}>
         Aldrick Enterprises
       </div>
-      <div style={{ fontFamily:"'Cinzel', serif", fontStyle:"italic", fontSize:13, color:"#7a5a18", letterSpacing:"0.08em", marginBottom:24, textAlign:"center" }}>
+      <div style={{ fontFamily:"'Cinzel', serif", fontStyle:"italic", fontSize:13, color:"var(--gold-dim)", letterSpacing:"0.08em", marginBottom:24, textAlign:"center" }}>
         Family is Everything and Everything is Family
       </div>
 
       {/* Faction photo banner */}
-      <div style={{ width:"100%", maxWidth:700, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid rgba(201,160,48,0.18)", boxShadow:"0 4px 40px rgba(0,0,0,0.7)" }}>
+      <div style={{ width:"100%", maxWidth:700, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid var(--border-gold)", boxShadow:"0 4px 40px var(--overlay)" }}>
         <img src="/sur13.png" alt="Aldrick Enterprises" style={{ width:"100%", display:"block", objectFit:"cover", maxHeight:280 }} />
       </div>
 
       {/* Ornate framed login card */}
       <div className="ev-entry-frame">
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:12, color:"#8a6c1e", textAlign:"center", letterSpacing:"0.06em" }}>
+          <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:12, color:"var(--gold-dim)", textAlign:"center", letterSpacing:"0.06em" }}>
             Introdu un nickname pentru a intra ca vizitator
           </div>
           <input value={nickname} onChange={e => setNickname(e.target.value)} onKeyDown={e => e.key==="Enter" && submit()} placeholder="Nickname"
-            style={{ background:"rgba(0,0,0,0.5)", border:"1px solid rgba(201,160,48,0.22)", borderRadius:3, color:"#e8d8a0", fontFamily:"'Barlow', sans-serif", fontSize:14, padding:"10px 14px", outline:"none", width:"100%", boxSizing:"border-box" }}
-            onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="rgba(201,160,48,0.22)"} />
+            style={{ background:"var(--surface-3)", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--gold-soft)", fontFamily:"'Barlow', sans-serif", fontSize:14, padding:"10px 14px", outline:"none", width:"100%", boxSizing:"border-box" }}
+            onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
           <button onClick={submit} disabled={!nickname.trim()}
-            style={{ background: nickname.trim() ? "linear-gradient(180deg, #d4a832 0%, #7a5210 100%)" : "rgba(201,160,48,0.08)", border:"1px solid rgba(201,160,48,0.3)", borderRadius:3, color: nickname.trim() ? "#0c0802" : "#5a4210", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"11px", cursor: nickname.trim() ? "pointer" : "default", letterSpacing:"0.10em" }}>
+            style={{ background: nickname.trim() ? "linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%)" : "var(--gold-glow)", border:"1px solid var(--gold-glow)", borderRadius:3, color: nickname.trim() ? "var(--on-gold)" : "var(--text-dim)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"11px", cursor: nickname.trim() ? "pointer" : "default", letterSpacing:"0.10em" }}>
             INTRĂ CA VIZITATOR
           </button>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ flex:1, height:1, background:"rgba(201,160,48,0.15)" }} />
-            <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:10, color:"#4a3210", letterSpacing:"0.14em" }}>SAU</span>
-            <div style={{ flex:1, height:1, background:"rgba(201,160,48,0.15)" }} />
+            <div style={{ flex:1, height:1, background:"var(--border-gold)" }} />
+            <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:10, color:"var(--text-dim)", letterSpacing:"0.14em" }}>SAU</span>
+            <div style={{ flex:1, height:1, background:"var(--border-gold)" }} />
           </div>
           <button onClick={onOpenLogin}
-            style={{ background:"transparent", border:"1px solid rgba(201,160,48,0.25)", borderRadius:3, color:"#c9a030", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>
+            style={{ background:"transparent", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--gold)", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>
             Am un cont (Membru / Admin)
           </button>
         </div>
@@ -281,28 +321,28 @@ function PhotoUpload({ photo, onChange, disabled, size = 90, fallback = null }) 
   };
   const shown = photo || fallback;
   return (
-    <div onClick={() => { if (!disabled) fileRef.current.click(); }} style={{ width:size, height:size*1.22, borderRadius:8, border:photo?"2px solid #c9a030":shown?"2px solid #4a3810":"2px dashed #444", background:shown?"transparent":"#100d06", cursor:disabled?"default":"pointer", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+    <div onClick={() => { if (!disabled) fileRef.current.click(); }} style={{ width:size, height:size*1.22, borderRadius:8, border:photo?"2px solid var(--gold)":shown?"2px solid var(--text-dim)":"2px dashed var(--border-strong)", background:shown?"transparent":"var(--surface-3)", cursor:disabled?"default":"pointer", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
       {shown ? <img src={shown} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-        : <div style={{ textAlign:"center", color:"#352808" }}><div style={{ fontSize:22, marginBottom:4 }}>📷</div>{!disabled && <div style={{ fontSize:10, fontFamily:"'Barlow', sans-serif" }}>Foto</div>}</div>}
+        : <div style={{ textAlign:"center", color:"var(--text-faint)" }}><div style={{ fontSize:22, marginBottom:4 }}>📷</div>{!disabled && <div style={{ fontSize:10, fontFamily:"'Barlow', sans-serif" }}>Foto</div>}</div>}
       {!disabled && <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />}
     </div>
   );
 }
 
 function FieldInput({ label, value, onChange, disabled, multiline }) {
-  const style = { background:"#050305", border:"1px solid #0e0a02", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", width:"100%", boxSizing:"border-box" };
+  const style = { background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", width:"100%", boxSizing:"border-box" };
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-      <label style={{ color:"#5a4210", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase" }}>{label}</label>
+      <label style={{ color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase" }}>{label}</label>
       {disabled
-        ? <div style={{ ...style, minHeight:32 }}>{value || <span style={{ color:"#2a1f06" }}>—</span>}</div>
+        ? <div style={{ ...style, minHeight:32 }}>{value || <span style={{ color:"var(--text-faint)" }}>—</span>}</div>
         : multiline
           ? <textarea value={value||""} onChange={e => onChange(e.target.value)} rows={3}
-              style={{ ...style, outline:"none", resize:"vertical", border:"1px solid #1a1506" }}
-              onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
+              style={{ ...style, outline:"none", resize:"vertical", border:"1px solid var(--border)" }}
+              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
           : <input value={value||""} onChange={e => onChange(e.target.value)} placeholder="—"
-              style={{ ...style, outline:"none", border:"1px solid #1a1506" }}
-              onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />}
+              style={{ ...style, outline:"none", border:"1px solid var(--border)" }}
+              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />}
     </div>
   );
 }
@@ -326,31 +366,31 @@ function RankSlider({ value, onChange, disabled, ranks }) {
   return (
     <div style={{ width:"100%" }}>
       <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-        <span style={{ color:"#6a5218", fontSize:11, fontFamily:"'Barlow', sans-serif" }}>RANK</span>
-        <span style={{ color:"#c9a030", fontSize:13, fontWeight:700, fontFamily:"'Rajdhani', sans-serif", letterSpacing:"0.08em" }}>{displayValue}</span>
+        <span style={{ color:"var(--text-dim)", fontSize:11, fontFamily:"'Barlow', sans-serif" }}>RANK</span>
+        <span style={{ color:"var(--gold)", fontSize:13, fontWeight:700, fontFamily:"'Rajdhani', sans-serif", letterSpacing:"0.08em" }}>{displayValue}</span>
       </div>
       <input type="range" min={0} max={safeRanks.length-1} value={idx} disabled={disabled}
         onChange={e => { if (!disabled) onChange(safeRanks[parseInt(e.target.value)]); }}
-        style={{ width:"100%", accentColor:"#c9a030", cursor:disabled?"default":"pointer" }} />
+        style={{ width:"100%", accentColor:"var(--gold)", cursor:disabled?"default":"pointer" }} />
       <div style={{ display:"flex", justifyContent:"space-between", marginTop:2 }}>
-        <span style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>{safeRanks[0]}</span>
-        <span style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>{safeRanks[safeRanks.length-1]}</span>
+        <span style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>{safeRanks[0]}</span>
+        <span style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>{safeRanks[safeRanks.length-1]}</span>
       </div>
     </div>
   );
 }
 
-function btnSmall() { return { background:"#100d06", border:"1px solid #201830", color:"#c9a030", borderRadius:5, width:28, height:28, cursor:"pointer", fontWeight:700, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Barlow', sans-serif" }; }
+function btnSmall() { return { background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--gold)", borderRadius:5, width:28, height:28, cursor:"pointer", fontWeight:700, fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Barlow', sans-serif" }; }
 
 // ─── Loading Skeletons ───────────────────────────────────────────────────────
 function SkeletonBox({ height = 20, width = "100%", radius = 6, style = {} }) {
-  return <div style={{ height, width, borderRadius:radius, background:"linear-gradient(90deg, #0f0a1c 0%, #0e0a02 50%, #0f0a1c 100%)", backgroundSize:"200% 100%", animation:"evShimmer 1.4s ease-in-out infinite", ...style }} />;
+  return <div style={{ height, width, borderRadius:radius, background:"linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%)", backgroundSize:"200% 100%", animation:"evShimmer 1.4s ease-in-out infinite", ...style }} />;
 }
 function SkeletonGrid({ count = 6, minWidth = 260, height = 220 }) {
   return (
-    <div style={{ display:"grid", gridTemplateColumns:`repeat(auto-fill, minmax(${minWidth}px, 1fr))`, gap:16 }}>
+    <div style={{ display:"grid", gridTemplateColumns:`repeat(auto-fill, minmax(min(${minWidth}px, 100%), 1fr))`, gap:16 }}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ background:"#0f0a1c", border:"1px solid #0e0a02", borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column", gap:10, padding:0 }}>
+        <div key={i} style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column", gap:10, padding:0 }}>
           <SkeletonBox height={Math.round(height * 0.6)} radius={0} />
           <div style={{ padding:"10px 14px 14px", display:"flex", flexDirection:"column", gap:8 }}>
             <SkeletonBox height={14} width="70%" />
@@ -365,7 +405,7 @@ function SkeletonRows({ count = 4 }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ background:"#0f0a1c", border:"1px solid #0e0a02", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:14 }}>
+        <div key={i} style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:10, padding:"12px 16px", display:"flex", alignItems:"center", gap:14 }}>
           <SkeletonBox height={42} width={42} radius={6} />
           <div style={{ flex:1, display:"flex", flexDirection:"column", gap:6 }}>
             <SkeletonBox height={13} width="35%" />
@@ -395,24 +435,24 @@ function SectionHeaderSkeleton() {
 function ArchiveModal({ memberName, onConfirm, onCancel }) {
   const [status, setStatus] = useState("demisie");
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, padding:16 }}>
-      <div style={{ background:"#100d06", border:"1px solid rgba(201,160,48,0.35)", borderRadius:10, padding:28, width:340, maxWidth:"100%", display:"flex", flexDirection:"column", gap:16 }}>
-        <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:15, color:"#c9a030", letterSpacing:"0.1em" }}>📁 ARHIVEAZĂ MEMBRU</div>
-        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:13, color:"#8a6c1e", lineHeight:1.6 }}>
-          <strong style={{ color:"#e8d8a0" }}>{memberName || "?"}</strong> va fi mutat în arhivă și nu va mai apărea în liste.
+    <div style={{ position:"fixed", inset:0, background:"var(--overlay)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, padding:16 }}>
+      <div style={{ background:"var(--surface-3)", border:"1px solid var(--border-gold)", borderRadius:10, padding:28, width:340, maxWidth:"100%", display:"flex", flexDirection:"column", gap:16 }}>
+        <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:15, color:"var(--gold)", letterSpacing:"0.1em" }}>📁 ARHIVEAZĂ MEMBRU</div>
+        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:13, color:"var(--gold-dim)", lineHeight:1.6 }}>
+          <strong style={{ color:"var(--gold-soft)" }}>{memberName || "?"}</strong> va fi mutat în arhivă și nu va mai apărea în liste.
         </div>
-        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"#6a5218", letterSpacing:"0.08em", textTransform:"uppercase" }}>Selectează motivul arhivării:</div>
+        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"var(--text-dim)", letterSpacing:"0.08em", textTransform:"uppercase" }}>Selectează motivul arhivării:</div>
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
           {[["demisie","📋 Demisie"],["decedat","🕯️ Decedat"]].map(([val, label]) => (
-            <label key={val} onClick={() => setStatus(val)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer", background:status===val?"rgba(201,160,48,0.08)":"transparent", border:`1px solid ${status===val?"rgba(201,160,48,0.35)":"#1a1506"}`, borderRadius:6, padding:"11px 14px", transition:"all 0.15s" }}>
-              <div style={{ width:16, height:16, borderRadius:"50%", border:`2px solid ${status===val?"#c9a030":"#3a2808"}`, background:status===val?"#c9a030":"transparent", flexShrink:0, transition:"all 0.15s" }} />
-              <span style={{ color:status===val?"#e8c84a":"#8a6c1e", fontFamily:"'Barlow', sans-serif", fontSize:14, fontWeight:600 }}>{label}</span>
+            <label key={val} onClick={() => setStatus(val)} style={{ display:"flex", alignItems:"center", gap:12, cursor:"pointer", background:status===val?"var(--gold-glow)":"transparent", border:`1px solid ${status===val?"var(--border-gold)":"var(--border)"}`, borderRadius:6, padding:"11px 14px", transition:"all 0.15s" }}>
+              <div style={{ width:16, height:16, borderRadius:"50%", border:`2px solid ${status===val?"var(--gold)":"var(--text-faint)"}`, background:status===val?"var(--gold)":"transparent", flexShrink:0, transition:"all 0.15s" }} />
+              <span style={{ color:status===val?"var(--gold-soft)":"var(--gold-dim)", fontFamily:"'Barlow', sans-serif", fontSize:14, fontWeight:600 }}>{label}</span>
             </label>
           ))}
         </div>
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
-          <button onClick={onCancel} style={{ flex:1, background:"transparent", border:"1px solid rgba(201,160,48,0.18)", borderRadius:6, color:"#6a5218", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
-          <button onClick={() => onConfirm(status)} style={{ flex:1, background:"linear-gradient(180deg, #1a3a10 0%, #0d1f08 100%)", border:"1px solid rgba(100,200,50,0.3)", borderRadius:6, color:"#86efac", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>✓ Arhivează</button>
+          <button onClick={onCancel} style={{ flex:1, background:"transparent", border:"1px solid var(--border-gold)", borderRadius:6, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
+          <button onClick={() => onConfirm(status)} style={{ flex:1, background:"linear-gradient(180deg, var(--success-border) 0%, var(--success-bg) 100%)", border:"1px solid var(--success-border)", borderRadius:6, color:"var(--success-soft)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>✓ Arhivează</button>
         </div>
       </div>
     </div>
@@ -422,17 +462,17 @@ function ArchiveModal({ memberName, onConfirm, onCancel }) {
 // ─── Delete confirmation modal ────────────────────────────────────────────────
 function DeleteConfirmModal({ memberName, onConfirm, onCancel }) {
   return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, padding:16 }}>
-      <div style={{ background:"#100d06", border:"1px solid rgba(239,68,68,0.35)", borderRadius:10, padding:28, width:340, maxWidth:"100%", display:"flex", flexDirection:"column", gap:16 }}>
-        <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:15, color:"#f87171", letterSpacing:"0.1em" }}>⚠️ ȘTERGE DEFINITIV</div>
-        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:13, color:"#8a6c1e", lineHeight:1.7 }}>
+    <div style={{ position:"fixed", inset:0, background:"var(--overlay)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:2000, padding:16 }}>
+      <div style={{ background:"var(--surface-3)", border:"1px solid var(--danger-border)", borderRadius:10, padding:28, width:340, maxWidth:"100%", display:"flex", flexDirection:"column", gap:16 }}>
+        <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:15, color:"var(--danger)", letterSpacing:"0.1em" }}>⚠️ ȘTERGE DEFINITIV</div>
+        <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:13, color:"var(--gold-dim)", lineHeight:1.7 }}>
           Ești sigur că vrei să ștergi definitiv pe{" "}
-          <strong style={{ color:"#e8d8a0" }}>{memberName || "?"}</strong>?{" "}
-          Această acțiune <span style={{ color:"#f87171" }}>nu poate fi anulată</span>.
+          <strong style={{ color:"var(--gold-soft)" }}>{memberName || "?"}</strong>?{" "}
+          Această acțiune <span style={{ color:"var(--danger)" }}>nu poate fi anulată</span>.
         </div>
         <div style={{ display:"flex", gap:8, marginTop:4 }}>
-          <button onClick={onCancel} style={{ flex:1, background:"transparent", border:"1px solid rgba(201,160,48,0.18)", borderRadius:6, color:"#6a5218", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
-          <button onClick={onConfirm} style={{ flex:1, background:"linear-gradient(180deg, #3a0808 0%, #1f0404 100%)", border:"1px solid rgba(239,68,68,0.4)", borderRadius:6, color:"#f87171", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>🗑️ Șterge definitiv</button>
+          <button onClick={onCancel} style={{ flex:1, background:"transparent", border:"1px solid var(--border-gold)", borderRadius:6, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
+          <button onClick={onConfirm} style={{ flex:1, background:"linear-gradient(180deg, var(--danger-bg) 0%, var(--danger-bg) 100%)", border:"1px solid var(--danger-border)", borderRadius:6, color:"var(--danger)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>🗑️ Șterge definitiv</button>
         </div>
       </div>
     </div>
@@ -443,7 +483,7 @@ function DeleteConfirmModal({ memberName, onConfirm, onCancel }) {
 function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDown, isAdmin, isGeneralAdmin, canDelete, isSalaSport = false, ranks, rankSystem, activityTasks = ACTIVITY_TASKS, isOwnerGA = false }) {
   const [expanded, setExpanded] = useState(false);
   const isExecutive = isSalaSport && !!member.executive;
-  const rs = isSalaSport ? { bg:"#0f0a1c", border:"#1a1426", shadow:"none", nameColor:"#e6def5" } : getRankStyle(rankSystem, member.rank, ranks);
+  const rs = isSalaSport ? { bg:"var(--surface-2)", border:"var(--border)", shadow:"none", nameColor:"var(--text)" } : getRankStyle(rankSystem, member.rank, ranks);
   // Sala Sport members fall back to the gym avatar; an uploaded photo wins.
   const avatarSrc = member.photo || (isSalaSport ? SALA_SPORT_AVATAR : null);
   const [activityLog, setActivityLog] = useState(Array.isArray(member.task_log) ? member.task_log : []);
@@ -505,28 +545,28 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
   };
 
   const selStyle = {
-    flex:1, background:"#0b0715", border:"1px solid #1a1426", borderRadius:7,
-    color:"#a89cc8", fontFamily:"'Barlow', sans-serif", fontSize:12,
+    flex:1, background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:7,
+    color:"var(--text-muted)", fontFamily:"'Barlow', sans-serif", fontSize:12,
     padding:"7px 10px", outline:"none", cursor:"pointer", appearance:"none",
     WebkitAppearance:"none",
   };
   return (
-    <div className="ev-member-card" data-rank={(!isSalaSport && rs.rankKey) ? rs.rankKey : undefined} style={{ background: member.card_bg ? `linear-gradient(rgba(5,3,20,0.72),rgba(5,3,20,0.72)),url(/cardbg.png) center/cover no-repeat` : isExecutive ? "linear-gradient(180deg, #1a1506 0%, #0e0a04 100%)" : rs.bg, border: member.card_bg ? "1px solid rgba(124,58,237,0.35)" : isExecutive ? "1px solid #a07820" : `1px solid ${rs.border}`, borderRadius:10, overflow:"hidden", boxShadow: member.card_bg ? "0 0 18px rgba(124,58,237,0.18)" : isExecutive ? "0 0 22px rgba(180,140,30,0.18)" : rs.shadow }}>
-      <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", userSelect:"none" }}>
-        <div style={{ width:42, height:42, borderRadius:6, border: isExecutive ? "1px solid #a07820" : "1px solid #1a1506", background:"#100d06", overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+    <div className="ev-member-card" data-rank={(!isSalaSport && rs.rankKey) ? rs.rankKey : undefined} style={{ background: member.card_bg ? `linear-gradient(var(--card-bg-veil),var(--card-bg-veil)),url(/cardbg.png) center/cover no-repeat` : isExecutive ? "var(--exec-bg)" : rs.bg, border: member.card_bg ? "1px solid var(--violet)" : isExecutive ? "1px solid var(--exec-border)" : `1px solid ${rs.border}`, borderRadius:10, overflow:"hidden", boxShadow: member.card_bg ? "var(--shadow-card)" : isExecutive ? "0 0 22px var(--gold-glow)" : rs.shadow }}>
+      <div className="ev-card-head" style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", userSelect:"none" }}>
+        <div style={{ width:42, height:42, borderRadius:6, border: isExecutive ? "1px solid var(--exec-border)" : "1px solid var(--border)", background:"var(--surface-3)", overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
           {avatarSrc ? <img src={avatarSrc} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:18 }}>👤</span>}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color: isExecutive ? "#f0d878" : rs.nameColor, textShadow: (!isExecutive && rs.nameGlow) ? rs.nameGlow : "none", letterSpacing:"0.05em" }}>{member.nume||<span style={{ color:"#2a1f06" }}>Fără Nume</span>}</div>
-          <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"#5a4210", marginTop:1 }}>
+          <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color: isExecutive ? "var(--gold-soft)" : rs.nameColor, textShadow: (!isExecutive && rs.nameGlow) ? rs.nameGlow : "none", letterSpacing:"0.05em" }}>{member.nume||<span style={{ color:"var(--text-faint)" }}>Fără Nume</span>}</div>
+          <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"var(--text-dim)", marginTop:1 }}>
             {isExecutive
-              ? <span style={{ color:"#c9a030", fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase" }}>◆ Executive</span>
+              ? <span style={{ color:"var(--gold)", fontWeight:700, letterSpacing:"0.14em", textTransform:"uppercase" }}>◆ Executive</span>
               : member.rank}
             {member.porecla?` · "${member.porecla}"`:"" }
           </div>
           {fmtConcediu(member) && (
             <div style={{ marginTop:5 }}>
-              <span style={{ background:"#1a1506", color:"#b89028", border:"1px solid #2e2108", borderRadius:4, padding:"1px 7px", fontSize:9, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", whiteSpace:"nowrap" }}>
+              <span style={{ background:"var(--surface-3)", color:"var(--gold-dim)", border:"1px solid var(--border-strong)", borderRadius:4, padding:"1px 7px", fontSize:9, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", whiteSpace:"nowrap" }}>
                 🏖 Concediu: {fmtConcediu(member)}
               </span>
             </div>
@@ -534,7 +574,7 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
           {!isSalaSport && LICENSE_DEFS.some(l => !!member[l.key]) && (
             <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginTop:5 }}>
               {LICENSE_DEFS.filter(l => !!member[l.key]).map(l => (
-                <span key={l.key} style={{ background:"#1a3a2a", color:"#4ade80", border:"1px solid #22c55e", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.07em", whiteSpace:"nowrap" }}>
+                <span key={l.key} style={{ background:"var(--success-bg)", color:"var(--success)", border:"1px solid var(--success)", borderRadius:4, padding:"1px 6px", fontSize:9, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.07em", whiteSpace:"nowrap" }}>
                   {l.label}
                 </span>
               ))}
@@ -544,40 +584,40 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           {!isSalaSport && <CycleButton options={STATUS_OPTIONS} value={member.status||"Activ"} onChange={v => update("status",v)} colorMap={STATUS_COLORS} disabled={!isAdmin} />}
           {!isSalaSport && <CycleButton options={TASK_OPTIONS} value={member.task||"Neplatit"} onChange={v => update("task",v)} colorMap={TASK_COLORS} disabled={!isAdmin} />}
-          {!isSalaSport && <div style={{ color:(member.puncte||0)<0?"#f87171":"#c9a030", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, minWidth:40, textAlign:"center" }}>{member.puncte||0}p</div>}
+          {!isSalaSport && <div style={{ color:(member.puncte||0)<0?"var(--danger)":"var(--gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, minWidth:40, textAlign:"center" }}>{member.puncte||0}p</div>}
           {isGeneralAdmin && (
             <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
               <button onClick={e => { e.stopPropagation(); onMoveUp && onMoveUp(); }} title="Mută sus"
-                style={{ background:"#100d06", border:"1px solid #1a1506", color:"#6a5218", borderRadius:4, width:24, height:20, cursor:"pointer", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}
-                onMouseEnter={e => { e.currentTarget.style.color="#c9a030"; e.currentTarget.style.borderColor="#241a06"; }}
-                onMouseLeave={e => { e.currentTarget.style.color="#6a5218"; e.currentTarget.style.borderColor="#1a1506"; }}>▲</button>
+                style={{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-dim)", borderRadius:4, width:24, height:20, cursor:"pointer", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}
+                onMouseEnter={e => { e.currentTarget.style.color="var(--gold)"; e.currentTarget.style.borderColor="var(--border-strong)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color="var(--text-dim)"; e.currentTarget.style.borderColor="var(--border)"; }}>▲</button>
               <button onClick={e => { e.stopPropagation(); onMoveDown && onMoveDown(); }} title="Mută jos"
-                style={{ background:"#100d06", border:"1px solid #1a1506", color:"#6a5218", borderRadius:4, width:24, height:20, cursor:"pointer", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}
-                onMouseEnter={e => { e.currentTarget.style.color="#c9a030"; e.currentTarget.style.borderColor="#241a06"; }}
-                onMouseLeave={e => { e.currentTarget.style.color="#6a5218"; e.currentTarget.style.borderColor="#1a1506"; }}>▼</button>
+                style={{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-dim)", borderRadius:4, width:24, height:20, cursor:"pointer", fontSize:10, display:"flex", alignItems:"center", justifyContent:"center", padding:0, lineHeight:1 }}
+                onMouseEnter={e => { e.currentTarget.style.color="var(--gold)"; e.currentTarget.style.borderColor="var(--border-strong)"; }}
+                onMouseLeave={e => { e.currentTarget.style.color="var(--text-dim)"; e.currentTarget.style.borderColor="var(--border)"; }}>▼</button>
             </div>
           )}
           {isOwnerGA && (
             <button onClick={e => { e.stopPropagation(); onUpdate({ ...member, card_bg: !member.card_bg }); }} title={member.card_bg ? "Scoate background" : "Activează background"}
-              style={{ background: member.card_bg ? "#1a0a30" : "#100d06", border:`1px solid ${member.card_bg ? "#7c3aed" : "#1a1506"}`, color: member.card_bg ? "#a78bfa" : "#6a5218", borderRadius:5, width:30, height:28, cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", padding:0, transition:"all 0.2s" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor="#7c3aed"; e.currentTarget.style.color="#a78bfa"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor=member.card_bg?"#7c3aed":"#1a1506"; e.currentTarget.style.color=member.card_bg?"#a78bfa":"#6a5218"; }}>
+              style={{ background: member.card_bg ? "var(--surface-2)" : "var(--surface-3)", border:`1px solid ${member.card_bg ? "var(--violet)" : "var(--border)"}`, color: member.card_bg ? "var(--violet-soft)" : "var(--text-dim)", borderRadius:5, width:30, height:28, cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", padding:0, transition:"all 0.2s" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor="var(--violet)"; e.currentTarget.style.color="var(--violet-soft)"; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor=member.card_bg?"var(--violet)":"var(--border)"; e.currentTarget.style.color=member.card_bg?"var(--violet-soft)":"var(--text-dim)"; }}>
               🖼
             </button>
           )}
           <button onClick={() => setExpanded(!expanded)} title={expanded?"Restrânge":"Extinde"}
-            style={{ background:"#100d06", border:"1px solid #1a1506", color:"#6a5218", borderRadius:5, width:30, height:28, cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}
-            onMouseEnter={e => { e.currentTarget.style.color="#c9a030"; e.currentTarget.style.borderColor="#241a06"; }}
-            onMouseLeave={e => { e.currentTarget.style.color="#6a5218"; e.currentTarget.style.borderColor="#1a1506"; }}>
+            style={{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-dim)", borderRadius:5, width:30, height:28, cursor:"pointer", fontSize:13, display:"flex", alignItems:"center", justifyContent:"center", padding:0 }}
+            onMouseEnter={e => { e.currentTarget.style.color="var(--gold)"; e.currentTarget.style.borderColor="var(--border-strong)"; }}
+            onMouseLeave={e => { e.currentTarget.style.color="var(--text-dim)"; e.currentTarget.style.borderColor="var(--border)"; }}>
             {expanded?"▲":"▼"}
           </button>
         </div>
       </div>
       {expanded && (
-        <div style={{ borderTop:"1px solid #0e0a02", padding:"16px", display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
+        <div style={{ borderTop:"1px solid var(--border)", padding:"16px", display:"flex", flexDirection:"column", gap:16 }}>
+          <div className="ev-card-body" style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
             <PhotoUpload photo={member.photo} onChange={v => update("photo",v)} disabled={!isAdmin} fallback={isSalaSport ? SALA_SPORT_AVATAR : null} />
-            <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+            <div className="ev-form-grid" style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <FieldInput label="Nume" value={member.nume} onChange={v => update("nume",v)} disabled={!isAdmin} />
               <FieldInput label="Luni" value={member.luni} onChange={v => update("luni",v)} disabled={!isAdmin} />
               <FieldInput label="Porecla" value={member.porecla} onChange={v => update("porecla",v)} disabled={!isAdmin} />
@@ -589,10 +629,10 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
           {/* Executive selector — Sala Sport only. When set, the rank is hidden. */}
           {isSalaSport && (
             <div>
-              <label style={{ color:"#5a4210", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6 }}>DESEMNARE</label>
+              <label style={{ color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6 }}>DESEMNARE</label>
               <select value={member.executive ? "executive" : "rank"} disabled={!isAdmin}
                 onChange={e => update("executive", e.target.value === "executive")}
-                style={{ ...selStyle, maxWidth:220, color: isExecutive ? "#f0d878" : "#a89cc8", border: isExecutive ? "1px solid #a07820" : "1px solid #1a1426", cursor: isAdmin ? "pointer" : "default" }}>
+                style={{ ...selStyle, maxWidth:220, color: isExecutive ? "var(--gold-soft)" : "var(--text-muted)", border: isExecutive ? "1px solid var(--exec-border)" : "1px solid var(--border)", cursor: isAdmin ? "pointer" : "default" }}>
                 <option value="rank">Rang normal</option>
                 <option value="executive">◆ Executive</option>
               </select>
@@ -602,25 +642,25 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
           {!isExecutive && <RankSlider value={member.rank||(ranks?ranks[0]:undefined)} onChange={v => update("rank",v)} disabled={!isAdmin} ranks={ranks} />}
           {/* Concediu (leave) date range — on every list, editable by admins. */}
           <div>
-            <label style={{ color:"#5a4210", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6 }}>CONCEDIU (De la → Până la)</label>
+            <label style={{ color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:6 }}>CONCEDIU (De la → Până la)</label>
             {isAdmin ? (
               <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
                 <input type="date" value={member.concediu_start ? String(member.concediu_start).slice(0,10) : ""} onChange={e => update("concediu_start", e.target.value || null)}
-                  style={{ background:"#050305", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", outline:"none", colorScheme:"dark" }} />
-                <span style={{ color:"#5a4210" }}>→</span>
+                  style={{ background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", outline:"none", colorScheme:"dark" }} />
+                <span style={{ color:"var(--text-dim)" }}>→</span>
                 <input type="date" value={member.concediu_end ? String(member.concediu_end).slice(0,10) : ""} onChange={e => update("concediu_end", e.target.value || null)}
-                  style={{ background:"#050305", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", outline:"none", colorScheme:"dark" }} />
+                  style={{ background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"6px 10px", outline:"none", colorScheme:"dark" }} />
                 {fmtConcediu(member) && <button onClick={() => onUpdate({ ...member, concediu_start:null, concediu_end:null })}
-                  style={{ background:"transparent", border:"1px solid #201830", borderRadius:6, color:"#6a5218", fontSize:12, padding:"5px 10px", cursor:"pointer" }}>Golește</button>}
+                  style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:6, color:"var(--text-dim)", fontSize:12, padding:"5px 10px", cursor:"pointer" }}>Golește</button>}
               </div>
             ) : (
-              <div style={{ color: fmtConcediu(member) ? "#b89028" : "#2a1f06", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>{fmtConcediu(member) || "—"}</div>
+              <div style={{ color: fmtConcediu(member) ? "var(--gold-dim)" : "var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>{fmtConcediu(member) || "—"}</div>
             )}
           </div>
           {/* License buttons — hidden for Sala Sport */}
           {!isSalaSport && (
           <div>
-            <label style={{ color:"#5a4210", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:8 }}>LICENȚE</label>
+            <label style={{ color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:8 }}>LICENȚE</label>
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               {LICENSE_DEFS.map(({ key, label }) => {
                 const obtained = !!member[key];
@@ -631,9 +671,9 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
                     title={obtained ? "Obținut" : "Neobținut"}
                     className="ev-license"
                     style={{
-                      background: obtained ? "#1a3a2a" : "#2e1a3d",
-                      color: obtained ? "#4ade80" : "#f87171",
-                      border: `1px solid ${obtained ? "#22c55e" : "#ef4444"}`,
+                      background: obtained ? "var(--success-bg)" : "var(--danger-border)",
+                      color: obtained ? "var(--success)" : "var(--danger)",
+                      border: `1px solid ${obtained ? "var(--success)" : "var(--danger)"}`,
                       borderRadius: 7,
                       padding: "5px 14px",
                       fontFamily: "'Barlow', sans-serif",
@@ -652,13 +692,13 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
           )}
           {/* ── PUNCTE & ACTIVITATE — hidden for Sala Sport ── */}
           {!isSalaSport && (
-          <div style={{ background:"#0b0715", border:"1px solid #0e0a02", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:10, padding:"14px 16px", display:"flex", flexDirection:"column", gap:12 }}>
             {/* Header: total points */}
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <label style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>PUNCTE TOTALE</label>
+              <label style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>PUNCTE TOTALE</label>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ color:(member.puncte||0)<0?"#f87171":"#c9a030", fontFamily:"'Rajdhani', sans-serif", fontWeight:800, fontSize:26, lineHeight:1 }}>{member.puncte||0}</span>
-                <span style={{ color:"#352808", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>p</span>
+                <span style={{ color:(member.puncte||0)<0?"var(--danger)":"var(--gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:800, fontSize:26, lineHeight:1 }}>{member.puncte||0}</span>
+                <span style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>p</span>
               </div>
             </div>
 
@@ -666,12 +706,12 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
             {activityLog.length > 0 && (
               <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
                 {activityLog.map(e => (
-                  <div key={e.key} className="ev-chip" style={{ display:"flex", alignItems:"center", gap:5, background: e.sign>0?"#0a1a0a":"#190f2a", border:`1px solid ${e.sign>0?"#1a3a1a":"#2e1a3d"}`, borderRadius:6, padding:"3px 6px 3px 9px" }}>
-                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color: e.sign>0?"#86efac":"#fca5a5" }}>{e.label}</span>
-                    {e.count > 1 && <span style={{ background:"#222", borderRadius:4, padding:"0 5px", fontSize:10, color:"#5a4210", fontFamily:"'Rajdhani', sans-serif", fontWeight:700 }}>x{e.count}</span>}
-                    <span style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:12, color: e.sign>0?"#4ade80":"#f87171" }}>{e.sign>0?"+":"-"}{e.pts * e.count}p</span>
-                    {isAdmin && <button onClick={() => removeActivity(e)} title="Anulează ultima înregistrare" style={{ background:"transparent", border:"none", cursor:"pointer", color:"#2a1f06", fontSize:12, lineHeight:1, padding:"0 2px", marginLeft:1, transition:"color 0.12s" }}
-                      onMouseEnter={e2 => e2.currentTarget.style.color="#f87171"} onMouseLeave={e2 => e2.currentTarget.style.color="#444"}>×</button>}
+                  <div key={e.key} className="ev-chip" style={{ display:"flex", alignItems:"center", gap:5, background: e.sign>0?"var(--success-bg)":"var(--surface-2)", border:`1px solid ${e.sign>0?"var(--success-border)":"var(--danger-border)"}`, borderRadius:6, padding:"3px 6px 3px 9px" }}>
+                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color: e.sign>0?"var(--success-soft)":"var(--danger)" }}>{e.label}</span>
+                    {e.count > 1 && <span style={{ background:"var(--surface-hover)", borderRadius:4, padding:"0 5px", fontSize:10, color:"var(--text-dim)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700 }}>x{e.count}</span>}
+                    <span style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:12, color: e.sign>0?"var(--success)":"var(--danger)" }}>{e.sign>0?"+":"-"}{e.pts * e.count}p</span>
+                    {isAdmin && <button onClick={() => removeActivity(e)} title="Anulează ultima înregistrare" style={{ background:"transparent", border:"none", cursor:"pointer", color:"var(--text-faint)", fontSize:12, lineHeight:1, padding:"0 2px", marginLeft:1, transition:"color 0.12s" }}
+                      onMouseEnter={e2 => e2.currentTarget.style.color="var(--danger)"} onMouseLeave={e2 => e2.currentTarget.style.color="var(--border-strong)"}>×</button>}
                   </div>
                 ))}
               </div>
@@ -687,7 +727,7 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
                   </select>
                 </div>
                 <button onClick={handleAddTask} disabled={!addTask}
-                  style={{ background: addTask?"#0d1f0d":"#050305", border:`1px solid ${addTask?"#22c55e":"#1a1426"}`, color: addTask?"#4ade80":"#251a06", borderRadius:7, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: addTask?"pointer":"default", transition:"all 0.15s" }}>
+                  style={{ background: addTask?"var(--success-bg)":"var(--bg)", border:`1px solid ${addTask?"var(--success)":"var(--border)"}`, color: addTask?"var(--success)":"var(--text-faint)", borderRadius:7, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: addTask?"pointer":"default", transition:"all 0.15s" }}>
                   ✓ Dă
                 </button>
               </div>
@@ -695,73 +735,73 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
               {/* Subtract task row */}
               <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                 <div style={{ flex:1, position:"relative" }}>
-                  <select value={subTask} onChange={e => setSubTask(e.target.value)} style={{ ...selStyle, color: subTask?"#fca5a5":"#a89cc8" }}>
+                  <select value={subTask} onChange={e => setSubTask(e.target.value)} style={{ ...selStyle, color: subTask?"var(--danger)":"var(--text-muted)" }}>
                     <option value="">➖ Scade activitate...</option>
                     {activityTasks.map(t => <option key={t.label} value={t.label}>{t.label} (-{t.points}p)</option>)}
                   </select>
                 </div>
                 <button onClick={handleSubTask} disabled={!subTask}
-                  style={{ background: subTask?"#1e1706":"#050305", border:`1px solid ${subTask?"#ef4444":"#1a1426"}`, color: subTask?"#f87171":"#251a06", borderRadius:7, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: subTask?"pointer":"default", transition:"all 0.15s" }}>
+                  style={{ background: subTask?"var(--surface-hover)":"var(--bg)", border:`1px solid ${subTask?"var(--danger)":"var(--border)"}`, color: subTask?"var(--danger)":"var(--text-faint)", borderRadius:7, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: subTask?"pointer":"default", transition:"all 0.15s" }}>
                   ✓ Scade
                 </button>
               </div>
 
               {/* Divider */}
-              <div style={{ borderTop:"1px solid #1c1728", paddingTop:10 }}>
-                <label style={{ color:"#2a1f06", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:8 }}>Ajustare Manuală</label>
+              <div style={{ borderTop:"1px solid var(--border)", paddingTop:10 }}>
+                <label style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", display:"block", marginBottom:8 }}>Ajustare Manuală</label>
                 <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                   <input
                     placeholder="Motiv (opțional)..."
                     value={manualLabel}
                     onChange={e => setManualLabel(e.target.value)}
                     onKeyDown={e => { if(e.key==="Enter") handleManual(); }}
-                    style={{ flex:1, background:"#050305", border:"1px solid #171022", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"7px 10px", outline:"none" }}
-                    onFocus={e => e.target.style.borderColor="#c9a030"}
-                    onBlur={e => e.target.style.borderColor="#171022"}
+                    style={{ flex:1, background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"7px 10px", outline:"none" }}
+                    onFocus={e => e.target.style.borderColor="var(--gold)"}
+                    onBlur={e => e.target.style.borderColor="var(--border)"}
                   />
                   <input
                     type="number" value={manualAmt} placeholder="0"
                     onChange={e => setManualAmt(parseInt(e.target.value) || "")}
                     onKeyDown={e => { if(e.key==="Enter") handleManual(); }}
-                    style={{ width:68, background:"#050305", border:"1px solid #171022", borderRadius:6, color: manualAmt > 0 ? "#4ade80" : manualAmt < 0 ? "#f87171" : "#c9a030", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, padding:"7px 8px", outline:"none", textAlign:"center" }}
-                    onFocus={e => e.target.style.borderColor="#c9a030"}
-                    onBlur={e => e.target.style.borderColor="#171022"}
+                    style={{ width:68, background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color: manualAmt > 0 ? "var(--success)" : manualAmt < 0 ? "var(--danger)" : "var(--gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, padding:"7px 8px", outline:"none", textAlign:"center" }}
+                    onFocus={e => e.target.style.borderColor="var(--gold)"}
+                    onBlur={e => e.target.style.borderColor="var(--border)"}
                   />
                   <button onClick={handleManual} disabled={!manualAmt || manualAmt === 0}
-                    style={{ background: manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "#0d1f0d" : "#1e1706") : "#050305", border:`1px solid ${manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "#22c55e" : "#ef4444") : "#1a1426"}`, color: manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "#4ade80" : "#f87171") : "#251a06", borderRadius:6, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: manualAmt && manualAmt !== 0 ? "pointer" : "default", transition:"all 0.15s", whiteSpace:"nowrap" }}>
+                    style={{ background: manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "var(--success-bg)" : "var(--surface-hover)") : "var(--bg)", border:`1px solid ${manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "var(--success)" : "var(--danger)") : "var(--border)"}`, color: manualAmt && manualAmt !== 0 ? (manualAmt > 0 ? "var(--success)" : "var(--danger)") : "var(--text-faint)", borderRadius:6, padding:"7px 14px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, cursor: manualAmt && manualAmt !== 0 ? "pointer" : "default", transition:"all 0.15s", whiteSpace:"nowrap" }}>
                     ✓ Aplică
                   </button>
                 </div>
-                <div style={{ marginTop:5, color:"#251a06", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>Număr pozitiv = adaugă · negativ = scade</div>
+                <div style={{ marginTop:5, color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>Număr pozitiv = adaugă · negativ = scade</div>
               </div>
 
               {/* Reset puncte — General Admin only */}
               {isGeneralAdmin && (
-                <div style={{ display:"flex", gap:8, paddingTop:4, borderTop:"1px solid #1c1728" }}>
+                <div style={{ display:"flex", gap:8, paddingTop:4, borderTop:"1px solid var(--border)" }}>
                   <button onClick={() => { setActivityLog([]); onUpdate({...member, task:"Neplatit", puncte:0, task_log:[]}); logAction("Reset puncte", member.nume || "?"); }}
-                    style={{ background:"#100d06", border:"1px solid #251a3d", color:"#fb923c", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>↺ Reset Puncte</button>
+                    style={{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--warn)", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>↺ Reset Puncte</button>
                 </div>
               )}
             </>)}
 
             {!isAdmin && (
-              <div style={{ color:"#352808", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>Doar adminii pot modifica punctele.</div>
+              <div style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>Doar adminii pot modifica punctele.</div>
             )}
           </div>
           )}
           {/* Archive / Delete */}
           {canDelete && (
-            <div style={{ display:"flex", gap:8, paddingTop:6, borderTop:"1px solid #0e0a02", flexWrap:"wrap" }}>
+            <div style={{ display:"flex", gap:8, paddingTop:6, borderTop:"1px solid var(--border)", flexWrap:"wrap" }}>
               {isGeneralAdmin ? (
                 <>
                   <button onClick={onArchive}
-                    style={{ background:"#0a100a", border:"1px solid #1e3010", color:"#86efac", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>📁 Arhivează</button>
+                    style={{ background:"var(--success-bg)", border:"1px solid var(--success-border)", color:"var(--success-soft)", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>📁 Arhivează</button>
                   <button onClick={onDelete}
-                    style={{ background:"#100d06", border:"1px solid #2e1a1a", color:"#f87171", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>🗑️ Șterge definitiv</button>
+                    style={{ background:"var(--surface-3)", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>🗑️ Șterge definitiv</button>
                 </>
               ) : (
                 <button onClick={onDelete}
-                  style={{ background:"#100d06", border:"1px solid #2e1a3d", color:"#f87171", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>✕ Șterge Membru</button>
+                  style={{ background:"var(--surface-3)", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:6, padding:"6px 14px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>✕ Șterge Membru</button>
               )}
             </div>
           )}
@@ -1048,7 +1088,7 @@ function MembersSection({ role, currentUser }) {
     ? searchFiltered.filter(m => !!m[licenseFilter])
     : searchFiltered;
 
-  const ARCHIVE_STATUS_COLORS = { demisie: { bg:"#0a0f1a", border:"#1e3a5f", color:"#60a5fa", label:"📋 Demisie" }, decedat: { bg:"#0f0a0a", border:"#3f1a1a", color:"#f87171", label:"🕯️ Decedat" } };
+  const ARCHIVE_STATUS_COLORS = { demisie: { bg:"var(--info-bg)", border:"var(--info-border)", color:"var(--info)", label:"📋 Demisie" }, decedat: { bg:"var(--surface-2)", border:"var(--danger-border)", color:"var(--danger)", label:"🕯️ Decedat" } };
   const archivedCount = isGeneralAdmin ? Object.values(members).flat().filter(m => m.archived).length : 0;
   const allArchivedMembers = isGeneralAdmin
     ? Object.entries(members).flatMap(([lid, mems]) =>
@@ -1061,11 +1101,11 @@ function MembersSection({ role, currentUser }) {
 
   if (loading) return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
-      <div style={{ display:"flex", gap:14, alignItems:"center", padding:"0 24px", borderBottom:"1px solid #1c1728", height:44, flexShrink:0 }}>
+      <div className="ev-tabbar" style={{ display:"flex", gap:14, alignItems:"center", padding:"0 24px", borderBottom:"1px solid var(--border)", height:44, flexShrink:0 }}>
         <SkeletonBox height={14} width={80} />
         <SkeletonBox height={14} width={80} />
       </div>
-      <div style={{ padding:"20px 24px" }}>
+      <div className="ev-pad" style={{ padding:"20px 24px" }}>
         <SectionHeaderSkeleton />
         <SkeletonRows count={5} />
       </div>
@@ -1075,85 +1115,85 @@ function MembersSection({ role, currentUser }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
       {/* List tabs */}
-      <div style={{ display:"flex", gap:4, alignItems:"center", padding:"0 24px", borderBottom:"1px solid #1c1728", height:44, overflowX:"auto", flexShrink:0 }}>
+      <div className="ev-tabbar" style={{ display:"flex", gap:4, alignItems:"center", padding:"0 24px", borderBottom:"1px solid var(--border)", height:44, overflowX:"auto", flexShrink:0 }}>
         {!showArchiveView && visibleLists.map(list => {
           const listMembers = (members[list.id] || []).filter(m => !m.archived);
           const activeCount = listMembers.filter(m => (m.status || "Activ") === "Activ").length;
           const isActive = list.id === activeListId;
           return (
-            <button key={list.id} onClick={() => setActiveListId(list.id)} className="list-tab-btn" style={{ background:isActive?"#120e02":"transparent", border:"none", borderBottom:isActive?"2px solid #c9a030":"2px solid transparent", color:isActive?"#e6def5":"#4a3810", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, padding:"0 16px", height:"100%", cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:8, transition:"color 0.2s,background 0.2s,border-color 0.2s" }}>
+            <button key={list.id} onClick={() => setActiveListId(list.id)} className="list-tab-btn" style={{ background:isActive?"var(--surface-hover)":"transparent", border:"none", borderBottom:isActive?"2px solid var(--gold)":"2px solid transparent", color:isActive?"var(--text)":"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, padding:"0 16px", height:"100%", cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:8, transition:"color 0.2s,background 0.2s,border-color 0.2s" }}>
               <span>{list.name}</span>
-              <span title={`${activeCount} activi din ${listMembers.length}`} style={{ background:isActive?"#1e1706":"#0d0a14", border:`1px solid ${isActive?"#c9a030":"#1e1628"}`, borderRadius:12, padding:"1px 8px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:10, color:isActive?"#c9a030":"#4a3810", letterSpacing:"0.04em", lineHeight:1.5, transition:"all 0.2s" }}>
-                {activeCount}<span style={{ color:isActive?"#8a6c1e":"#2a1e08" }}>/{listMembers.length}</span>
+              <span title={`${activeCount} activi din ${listMembers.length}`} style={{ background:isActive?"var(--surface-hover)":"var(--surface-3)", border:`1px solid ${isActive?"var(--gold)":"var(--border)"}`, borderRadius:12, padding:"1px 8px", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:10, color:isActive?"var(--gold)":"var(--text-dim)", letterSpacing:"0.04em", lineHeight:1.5, transition:"all 0.2s" }}>
+                {activeCount}<span style={{ color:isActive?"var(--gold-dim)":"var(--text-faint)" }}>/{listMembers.length}</span>
               </span>
-              {isGeneralAdmin && <span onClick={e => { e.stopPropagation(); deleteList(list.id); }} style={{ color:"#2a1f06", fontSize:11, cursor:"pointer", transition:"color 0.15s" }} onMouseEnter={e=>e.currentTarget.style.color="#f87171"} onMouseLeave={e=>e.currentTarget.style.color="#2a1f06"}>✕</span>}
+              {isGeneralAdmin && <span onClick={e => { e.stopPropagation(); deleteList(list.id); }} style={{ color:"var(--text-faint)", fontSize:11, cursor:"pointer", transition:"color 0.15s" }} onMouseEnter={e=>e.currentTarget.style.color="var(--danger)"} onMouseLeave={e=>e.currentTarget.style.color="var(--text-faint)"}>✕</span>}
             </button>
           );
         })}
         {isGeneralAdmin && (showNewList ? (
           <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <input autoFocus value={newListName} onChange={e => setNewListName(e.target.value)} onKeyDown={e => { if(e.key==="Enter") createList(); if(e.key==="Escape"){setShowNewList(false);setNewListName("");setNewListSystem("default");} }} placeholder="Nume listă..." style={{ background:"#100d06", border:"1px solid #c9a030", borderRadius:5, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"3px 8px", outline:"none", width:130 }} />
-            <select value={newListSystem} onChange={e => setNewListSystem(e.target.value)} title="Sistem ranguri" style={{ background:"#100d06", border:"1px solid #1a1506", borderRadius:4, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 6px", outline:"none", cursor:"pointer" }}>
+            <input autoFocus value={newListName} onChange={e => setNewListName(e.target.value)} onKeyDown={e => { if(e.key==="Enter") createList(); if(e.key==="Escape"){setShowNewList(false);setNewListName("");setNewListSystem("default");} }} placeholder="Nume listă..." style={{ background:"var(--surface-3)", border:"1px solid var(--gold)", borderRadius:5, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"3px 8px", outline:"none", width:130 }} />
+            <select value={newListSystem} onChange={e => setNewListSystem(e.target.value)} title="Sistem ranguri" style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:4, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 6px", outline:"none", cursor:"pointer" }}>
               {Object.entries(RANK_SYSTEMS).map(([key, sys]) => <option key={key} value={key}>{sys.label}</option>)}
             </select>
-            <button onClick={createList} style={{ background:"#c9a030", border:"none", borderRadius:4, color:"#0e0a18", fontWeight:700, fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✓</button>
-            <button onClick={() => {setShowNewList(false);setNewListName("");setNewListSystem("default");}} style={{ background:"transparent", border:"1px solid #201830", borderRadius:4, color:"#5a4210", fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✕</button>
+            <button onClick={createList} style={{ background:"var(--gold)", border:"none", borderRadius:4, color:"var(--on-gold)", fontWeight:700, fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✓</button>
+            <button onClick={() => {setShowNewList(false);setNewListName("");setNewListSystem("default");}} style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:4, color:"var(--text-dim)", fontSize:11, padding:"3px 8px", cursor:"pointer" }}>✕</button>
           </div>
         ) : (
-          <button onClick={() => setShowNewList(true)} style={{ background:"transparent", border:"1px solid #1a1506", borderRadius:5, color:"#352808", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 10px", cursor:"pointer", marginLeft:4, whiteSpace:"nowrap" }}>+ Listă Nouă</button>
+          <button onClick={() => setShowNewList(true)} style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:5, color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 10px", cursor:"pointer", marginLeft:4, whiteSpace:"nowrap" }}>+ Listă Nouă</button>
         ))}
         {isGeneralAdmin && (
-          <button onClick={() => setShowArchiveView(v => !v)} style={{ marginLeft:8, background:showArchiveView?"#0a1a08":"transparent", border:`1px solid ${showArchiveView?"#22c55e":"#1a3010"}`, borderBottom:showArchiveView?"2px solid #22c55e":"2px solid transparent", borderRadius:"4px 4px 0 0", color:showArchiveView?"#86efac":"#2a3a10", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, padding:"0 12px", height:"100%", cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
+          <button onClick={() => setShowArchiveView(v => !v)} style={{ marginLeft:8, background:showArchiveView?"var(--success-bg)":"transparent", border:`1px solid ${showArchiveView?"var(--success)":"var(--success-bg)"}`, borderBottom:showArchiveView?"2px solid var(--success)":"2px solid transparent", borderRadius:"4px 4px 0 0", color:showArchiveView?"var(--success-soft)":"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, padding:"0 12px", height:"100%", cursor:"pointer", whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:6 }}>
             📁 Arhivă
-            {archivedCount > 0 && <span style={{ background:"#1a3010", border:"1px solid #22c55e", borderRadius:10, padding:"0 5px", fontSize:10, color:"#86efac", fontFamily:"'Rajdhani', sans-serif", fontWeight:700 }}>{archivedCount}</span>}
+            {archivedCount > 0 && <span style={{ background:"var(--success-bg)", border:"1px solid var(--success)", borderRadius:10, padding:"0 5px", fontSize:10, color:"var(--success-soft)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700 }}>{archivedCount}</span>}
           </button>
         )}
-        <div style={{ marginLeft:"auto", color:saving?"#c9a030":"#1a1506", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", whiteSpace:"nowrap" }}>{saving?"● SALVARE...":"● SALVAT"}</div>
+        <div style={{ marginLeft:"auto", color:saving?"var(--gold)":"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", whiteSpace:"nowrap" }}>{saving?"● SALVARE...":"● SALVAT"}</div>
       </div>
 
       {/* Faction photo banner — Aldrick Family & Sicarios only */}
       {!showArchiveView && !activeIsSalaSport && (
-        <div style={{ width:"100%", overflow:"hidden", borderBottom:"1px solid rgba(201,160,48,0.10)", flexShrink:0 }}>
+        <div style={{ width:"100%", overflow:"hidden", borderBottom:"1px solid var(--border-gold)", flexShrink:0 }}>
           <img src="/pier.png" alt="Aldrick Family & Sicarios" style={{ width:"100%", display:"block", objectFit:"cover", maxHeight:200 }} />
         </div>
       )}
 
       {/* Archive view — GA only */}
       {showArchiveView && isGeneralAdmin && (
-        <div style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
+        <div className="ev-pad" style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
           <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20 }}>
-            <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:20, color:"#86efac" }}>📁 ARHIVĂ MEMBRI</h2>
-            <span style={{ color:"#2a3a10", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{allArchivedMembers.length} persoane arhivate</span>
+            <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:20, color:"var(--success-soft)" }}>📁 ARHIVĂ MEMBRI</h2>
+            <span style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{allArchivedMembers.length} persoane arhivate</span>
           </div>
           {allArchivedMembers.length === 0 ? (
-            <div style={{ background:"#050305", border:"1px dashed #1a3010", borderRadius:10, padding:"40px 24px", textAlign:"center", color:"#2a3a10", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Nicio persoană arhivată.</div>
+            <div style={{ background:"var(--bg)", border:"1px dashed var(--success-bg)", borderRadius:10, padding:"40px 24px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Nicio persoană arhivată.</div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {allArchivedMembers.map(m => {
-                const sc = ARCHIVE_STATUS_COLORS[m.archive_status] || { bg:"#0f0a0a", border:"#2a1a06", color:"#8a6c1e", label: m.archive_status || "?" };
+                const sc = ARCHIVE_STATUS_COLORS[m.archive_status] || { bg:"var(--surface-2)", border:"var(--border-strong)", color:"var(--gold-dim)", label: m.archive_status || "?" };
                 return (
-                  <div key={m.id} style={{ background:"#0c0a04", border:"1px solid #1a1506", borderRadius:8, padding:"14px 18px", display:"flex", gap:16, alignItems:"flex-start" }}>
-                    {m._avatar && <img src={m._avatar} alt="" style={{ width:52, height:64, objectFit:"cover", borderRadius:5, border:"1px solid #2a1a06", flexShrink:0 }} />}
+                  <div key={m.id} style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:8, padding:"14px 18px", display:"flex", gap:16, alignItems:"flex-start" }}>
+                    {m._avatar && <img src={m._avatar} alt="" style={{ width:52, height:64, objectFit:"cover", borderRadius:5, border:"1px solid var(--border-strong)", flexShrink:0 }} />}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
-                        <span style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color:"#c9a030" }}>{m.nume || "—"}</span>
-                        {m.porecla && <span style={{ color:"#5a4210", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>({m.porecla})</span>}
-                        <span style={{ background:"#1a1506", border:"1px solid #2a1a06", borderRadius:4, padding:"1px 8px", fontFamily:"'Barlow', sans-serif", fontSize:11, color:"#7a5a18" }}>{m._listName}</span>
+                        <span style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color:"var(--gold)" }}>{m.nume || "—"}</span>
+                        {m.porecla && <span style={{ color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>({m.porecla})</span>}
+                        <span style={{ background:"var(--surface-3)", border:"1px solid var(--border-strong)", borderRadius:4, padding:"1px 8px", fontFamily:"'Barlow', sans-serif", fontSize:11, color:"var(--gold-dim)" }}>{m._listName}</span>
                         <span style={{ background:sc.bg, border:`1px solid ${sc.border}`, borderRadius:4, padding:"1px 8px", fontFamily:"'Barlow', sans-serif", fontSize:11, color:sc.color, fontWeight:600 }}>{sc.label}</span>
                       </div>
-                      <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:12, fontFamily:"'Barlow', sans-serif", color:"#5a4210" }}>
-                        {m.rank && <span>Rang: <span style={{ color:"#8a6c1e" }}>{m.rank}</span></span>}
-                        {m.luni && <span>Luni: <span style={{ color:"#8a6c1e" }}>{m.luni}</span></span>}
-                        {m.cnp && <span>CNP: <span style={{ color:"#6a5010" }}>{m.cnp}</span></span>}
-                        {m.telefon && <span>Tel: <span style={{ color:"#6a5010" }}>{m.telefon}</span></span>}
-                        {m.inmatriculare && <span>Auto: <span style={{ color:"#6a5010" }}>{m.inmatriculare}</span></span>}
-                        {m.puncte !== undefined && <span>Puncte: <span style={{ color:"#c9a030" }}>{m.puncte}</span></span>}
-                        {m.archived_at && <span style={{ color:"#3a2808" }}>Arhivat: {new Date(m.archived_at).toLocaleDateString("ro-RO")}</span>}
+                      <div style={{ display:"flex", gap:14, flexWrap:"wrap", fontSize:12, fontFamily:"'Barlow', sans-serif", color:"var(--text-dim)" }}>
+                        {m.rank && <span>Rang: <span style={{ color:"var(--gold-dim)" }}>{m.rank}</span></span>}
+                        {m.luni && <span>Luni: <span style={{ color:"var(--gold-dim)" }}>{m.luni}</span></span>}
+                        {m.cnp && <span>CNP: <span style={{ color:"var(--text-dim)" }}>{m.cnp}</span></span>}
+                        {m.telefon && <span>Tel: <span style={{ color:"var(--text-dim)" }}>{m.telefon}</span></span>}
+                        {m.inmatriculare && <span>Auto: <span style={{ color:"var(--text-dim)" }}>{m.inmatriculare}</span></span>}
+                        {m.puncte !== undefined && <span>Puncte: <span style={{ color:"var(--gold)" }}>{m.puncte}</span></span>}
+                        {m.archived_at && <span style={{ color:"var(--text-faint)" }}>Arhivat: {new Date(m.archived_at).toLocaleDateString("ro-RO")}</span>}
                       </div>
-                      <div style={{ marginTop:8, borderTop:"1px solid #1a1506", paddingTop:8 }}>
+                      <div style={{ marginTop:8, borderTop:"1px solid var(--border)", paddingTop:8 }}>
                         <button
                           onClick={() => setPendingDelete({ listId: m.list_id, memberId: m.id, name: m.nume || "?" })}
-                          style={{ background:"#100d06", border:"1px solid #2e1a1a", color:"#f87171", borderRadius:6, padding:"5px 13px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer" }}>
+                          style={{ background:"var(--surface-3)", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:6, padding:"5px 13px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer" }}>
                           🗑️ Șterge definitiv
                         </button>
                       </div>
@@ -1182,39 +1222,39 @@ function MembersSection({ role, currentUser }) {
         />
       )}
 
-      {!showArchiveView && <div style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
+      {!showArchiveView && <div className="ev-pad" style={{ flex:1, padding:"20px 24px", overflowY:"auto" }}>
         {!activeList ? (
           <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:300, gap:12 }}>
-            <div style={{ color:"#251a06", fontSize:40 }}>📋</div>
-            <div style={{ color:"#2a1f06", fontFamily:"'Rajdhani', sans-serif", fontSize:16 }}>NICIO LISTĂ</div>
-            {isGeneralAdmin && <button onClick={() => setShowNewList(true)} style={{ background:"#c9a030", border:"none", borderRadius:8, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, padding:"8px 20px", cursor:"pointer" }}>+ CREEAZĂ PRIMA LISTĂ</button>}
+            <div style={{ color:"var(--text-faint)", fontSize:40 }}>📋</div>
+            <div style={{ color:"var(--text-faint)", fontFamily:"'Rajdhani', sans-serif", fontSize:16 }}>NICIO LISTĂ</div>
+            {isGeneralAdmin && <button onClick={() => setShowNewList(true)} style={{ background:"var(--gold)", border:"none", borderRadius:8, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, padding:"8px 20px", cursor:"pointer" }}>+ CREEAZĂ PRIMA LISTĂ</button>}
           </div>
         ) : (
           <>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, gap:12, flexWrap:"wrap" }}>
               <div>
-                <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:20, color:"#e6def5" }}>{activeList.name}</h2>
-                <div style={{ color:"#352808", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>
+                <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:20, color:"var(--text)" }}>{activeList.name}</h2>
+                <div style={{ color:"var(--text-faint)", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>
                   {(q||licenseFilter) ? `${activeMembers.length} / ${sortedMembers.length}` : activeMembers.length} membri
-                  {!isAdmin&&<span style={{ marginLeft:8, color:"#241a06" }}>· Vizualizare</span>}
+                  {!isAdmin&&<span style={{ marginLeft:8, color:"var(--text-faint)" }}>· Vizualizare</span>}
                 </div>
               </div>
-              <div style={{ display:"flex", alignItems:"center", gap:8, marginLeft:"auto" }}>
-                <div style={{ position:"relative" }}>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Caută nume, poreclă, CNP, telefon, rang..."
-                    style={{ background:"#050305", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 28px 7px 12px", width:300, outline:"none" }}
-                    onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
-                  {search && <button onClick={() => setSearch("")} title="Șterge căutarea" style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", background:"transparent", border:"none", color:"#5a4210", fontSize:14, cursor:"pointer", padding:"0 4px" }}>✕</button>}
+              <div className="ev-toolbar" style={{ display:"flex", alignItems:"center", gap:8, marginLeft:"auto" }}>
+                <div className="ev-search-wrap" style={{ position:"relative" }}>
+                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Caută nume, poreclă, CNP, telefon, rang..." className="ev-search"
+                    style={{ background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 28px 7px 12px", width:300, outline:"none" }}
+                    onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
+                  {search && <button onClick={() => setSearch("")} title="Șterge căutarea" style={{ position:"absolute", right:6, top:"50%", transform:"translateY(-50%)", background:"transparent", border:"none", color:"var(--text-dim)", fontSize:14, cursor:"pointer", padding:"0 4px" }}>✕</button>}
                 </div>
-                {canAddToList(activeList) && <button onClick={addMember} style={{ background:"#c9a030", border:"none", borderRadius:7, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ ADAUGĂ MEMBRU</button>}
+                {canAddToList(activeList) && <button onClick={addMember} style={{ background:"var(--gold)", border:"none", borderRadius:7, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ ADAUGĂ MEMBRU</button>}
               </div>
             </div>
             {!activeIsSalaSport && (
             <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap", marginBottom:12 }}>
-              <span style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginRight:4 }}>Licență:</span>
+              <span style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", textTransform:"uppercase", marginRight:4 }}>Licență:</span>
               <button
                 onClick={() => setLicenseFilter(null)}
-                style={{ background:licenseFilter===null?"#241a06":"#1c1728", color:licenseFilter===null?"#c9a030":"#555", border:`1px solid ${licenseFilter===null?"#c9a030":"#1a1506"}`, borderRadius:5, padding:"3px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer", letterSpacing:"0.05em" }}>
+                style={{ background:licenseFilter===null?"var(--border-strong)":"var(--border)", color:licenseFilter===null?"var(--gold)":"var(--text-dim)", border:`1px solid ${licenseFilter===null?"var(--gold)":"var(--border)"}`, borderRadius:5, padding:"3px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer", letterSpacing:"0.05em" }}>
                 TOATE
               </button>
               {LICENSE_DEFS.map(l => {
@@ -1222,9 +1262,9 @@ function MembersSection({ role, currentUser }) {
                 const count = (members[activeListId]||[]).filter(m => !!m[l.key]).length;
                 return (
                   <button key={l.key} onClick={() => setLicenseFilter(active ? null : l.key)}
-                    style={{ background:active?"#1a3a2a":"#1c1728", color:active?"#4ade80":"#555", border:`1px solid ${active?"#22c55e":"#1a1506"}`, borderRadius:5, padding:"3px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer", letterSpacing:"0.05em", display:"flex", alignItems:"center", gap:5 }}>
+                    style={{ background:active?"var(--success-bg)":"var(--border)", color:active?"var(--success)":"var(--text-dim)", border:`1px solid ${active?"var(--success)":"var(--border)"}`, borderRadius:5, padding:"3px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer", letterSpacing:"0.05em", display:"flex", alignItems:"center", gap:5 }}>
                     {l.label}
-                    <span style={{ background:active?"#0d2a1a":"#050305", color:active?"#4ade80":"#444", border:`1px solid ${active?"#22c55e":"#1a1506"}`, borderRadius:8, padding:"0 5px", fontSize:10, fontFamily:"'Rajdhani', sans-serif", fontWeight:700, lineHeight:1.5 }}>{count}</span>
+                    <span style={{ background:active?"var(--success-bg)":"var(--bg)", color:active?"var(--success)":"var(--border-strong)", border:`1px solid ${active?"var(--success)":"var(--border)"}`, borderRadius:8, padding:"0 5px", fontSize:10, fontFamily:"'Rajdhani', sans-serif", fontWeight:700, lineHeight:1.5 }}>{count}</span>
                   </button>
                 );
               })}
@@ -1232,7 +1272,7 @@ function MembersSection({ role, currentUser }) {
             )}
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {activeMembers.length===0 ? (
-                <div style={{ background:"#050305", border:"1px dashed #1d1528", borderRadius:10, padding:"40px 24px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Niciun membru. {canAddToList(activeList)&&"Apasă + pentru a adăuga."}</div>
+                <div style={{ background:"var(--bg)", border:"1px dashed var(--border)", borderRadius:10, padding:"40px 24px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Niciun membru. {canAddToList(activeList)&&"Apasă + pentru a adăuga."}</div>
               ) : activeMembers.map((m, idx) => (
                 <MemberCard key={m.id} member={m}
                   onUpdate={u => updateMember(activeListId, u)}
@@ -1293,45 +1333,45 @@ function HeistDetail({ heist, isAdmin, onBack }) {
   };
 
   return (
-    <div style={{ padding:"20px 24px" }}>
+    <div className="ev-pad" style={{ padding:"20px 24px" }}>
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-        <button onClick={onBack} style={{ background:"#100d06", border:"1px solid #1a1506", borderRadius:7, color:"#6a5218", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 14px", cursor:"pointer" }}>← Înapoi</button>
-        <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"#c9a030", letterSpacing:"0.08em" }}>{heist.name}</h2>
-        {isAdmin && <button onClick={addItem} style={{ marginLeft:"auto", background:"#c9a030", border:"none", borderRadius:7, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ Adaugă Foto/Info</button>}
+        <button onClick={onBack} style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:7, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 14px", cursor:"pointer" }}>← Înapoi</button>
+        <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"var(--gold)", letterSpacing:"0.08em" }}>{heist.name}</h2>
+        {isAdmin && <button onClick={addItem} style={{ marginLeft:"auto", background:"var(--gold)", border:"none", borderRadius:7, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ Adaugă Foto/Info</button>}
       </div>
 
       {loading ? (
         <SkeletonGrid count={6} minWidth={260} height={260} />
       ) : items.length === 0 ? (
-        <div style={{ background:"#050305", border:"1px dashed #1d1528", borderRadius:10, padding:"48px 24px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>
+        <div style={{ background:"var(--bg)", border:"1px dashed var(--border)", borderRadius:10, padding:"48px 24px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>
           Nicio informație adăugată. {isAdmin && "Apasă + pentru a adăuga."}
         </div>
       ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap:16 }}>
           {items.map(item => (
-            <div key={item.id} className="ev-grid-card" style={{ background:"#0f0a1c", border:"1px solid #171022", borderRadius:10, overflow:"hidden" }}>
+            <div key={item.id} className="ev-grid-card" style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
               {item.photo ? (
                 <div onClick={() => setLightbox(item.photo)} style={{ cursor:"zoom-in", position:"relative", height:180, overflow:"hidden" }}>
                   <img src={item.photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.2s" }}
                     onMouseEnter={e => e.target.style.transform="scale(1.03)"} onMouseLeave={e => e.target.style.transform="scale(1)"} />
-                  <div style={{ position:"absolute", bottom:6, right:8, background:"rgba(0,0,0,0.6)", borderRadius:4, padding:"2px 6px", color:"#6a5218", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>🔍 zoom</div>
+                  <div style={{ position:"absolute", bottom:6, right:8, background:"var(--overlay)", borderRadius:4, padding:"2px 6px", color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif" }}>🔍 zoom</div>
                 </div>
               ) : isAdmin ? (
                 <PhotoUpload photo={null} onChange={v => updateItem(item.id, { photo:v }, true)} disabled={false} size={260} />
               ) : (
-                <div style={{ height:120, background:"#100d06", display:"flex", alignItems:"center", justifyContent:"center", color:"#251a06", fontSize:24 }}>📷</div>
+                <div style={{ height:120, background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-faint)", fontSize:24 }}>📷</div>
               )}
               <div style={{ padding:12, display:"flex", flexDirection:"column", gap:8 }}>
                 {isAdmin ? (
                   <>
                     <textarea value={item.info||""} onChange={e => updateItem(item.id, { info:e.target.value })} placeholder="Adaugă informații..." rows={3}
-                      style={{ background:"#0c0a04", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 8px", outline:"none", resize:"vertical" }}
-                      onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
-                    <button onClick={() => deleteItem(item.id)} style={{ background:"transparent", border:"1px solid #2e1a3d", color:"#f87171", borderRadius:5, padding:"4px", fontFamily:"'Barlow', sans-serif", fontSize:11, cursor:"pointer" }}>✕ Șterge</button>
+                      style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 8px", outline:"none", resize:"vertical" }}
+                      onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
+                    <button onClick={() => deleteItem(item.id)} style={{ background:"transparent", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:5, padding:"4px", fontFamily:"'Barlow', sans-serif", fontSize:11, cursor:"pointer" }}>✕ Șterge</button>
                   </>
                 ) : item.info ? (
-                  <div style={{ color:"#aaa", fontFamily:"'Barlow', sans-serif", fontSize:13, lineHeight:1.5 }}>{item.info}</div>
+                  <div style={{ color:"var(--text-muted)", fontFamily:"'Barlow', sans-serif", fontSize:13, lineHeight:1.5 }}>{item.info}</div>
                 ) : null}
               </div>
             </div>
@@ -1384,48 +1424,48 @@ function HeistsSection({ isAdmin }) {
   if (activeHeist) return <HeistDetail heist={activeHeist} isAdmin={isAdmin} onBack={() => setActiveHeist(null)} />;
 
   return (
-    <div style={{ padding:"20px 24px" }}>
+    <div className="ev-pad" style={{ padding:"20px 24px" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"#e6def5" }}>HEISTS</h2>
-          <div style={{ color:"#352808", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{heists.length} înregistrate</div>
+          <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"var(--text)" }}>HEISTS</h2>
+          <div style={{ color:"var(--text-faint)", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{heists.length} înregistrate</div>
         </div>
         {isAdmin && (showNew ? (
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if(e.key==="Enter") createHeist(); if(e.key==="Escape"){setShowNew(false);setNewName("");} }} placeholder="Nume heist..."
-              style={{ background:"#100d06", border:"1px solid #c9a030", borderRadius:7, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 12px", outline:"none", width:200 }} />
-            <button onClick={createHeist} style={{ background:"#c9a030", border:"none", borderRadius:6, color:"#0e0a18", fontWeight:700, fontSize:12, padding:"7px 14px", cursor:"pointer" }}>✓</button>
-            <button onClick={() => {setShowNew(false);setNewName("");}} style={{ background:"transparent", border:"1px solid #201830", borderRadius:6, color:"#5a4210", fontSize:12, padding:"7px 12px", cursor:"pointer" }}>✕</button>
+              style={{ background:"var(--surface-3)", border:"1px solid var(--gold)", borderRadius:7, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 12px", outline:"none", width:200 }} />
+            <button onClick={createHeist} style={{ background:"var(--gold)", border:"none", borderRadius:6, color:"var(--on-gold)", fontWeight:700, fontSize:12, padding:"7px 14px", cursor:"pointer" }}>✓</button>
+            <button onClick={() => {setShowNew(false);setNewName("");}} style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:6, color:"var(--text-dim)", fontSize:12, padding:"7px 12px", cursor:"pointer" }}>✕</button>
           </div>
         ) : (
-          <button onClick={() => setShowNew(true)} style={{ background:"#c9a030", border:"none", borderRadius:7, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ HEIST NOU</button>
+          <button onClick={() => setShowNew(true)} style={{ background:"var(--gold)", border:"none", borderRadius:7, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ HEIST NOU</button>
         ))}
       </div>
 
       {loading ? (
         <SkeletonGrid count={6} minWidth={220} height={210} />
       ) : heists.length === 0 ? (
-        <div style={{ background:"#050305", border:"1px dashed #1d1528", borderRadius:10, padding:"60px 24px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:14 }}>
+        <div style={{ background:"var(--bg)", border:"1px dashed var(--border)", borderRadius:10, padding:"60px 24px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:14 }}>
           Niciun heist. {isAdmin && "Creează primul heist."}
         </div>
       ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))", gap:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(220px, 100%), 1fr))", gap:16 }}>
           {heists.map(heist => (
-            <div key={heist.id} className="ev-grid-card" style={{ background:"#0f0a1c", border:"1px solid #171022", borderRadius:12, overflow:"hidden", cursor:"pointer" }}>
-              <div onClick={() => setActiveHeist(heist)} style={{ height:150, overflow:"hidden", position:"relative", background:"#100d06" }}>
+            <div key={heist.id} className="ev-grid-card" style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:12, overflow:"hidden", cursor:"pointer" }}>
+              <div onClick={() => setActiveHeist(heist)} style={{ height:150, overflow:"hidden", position:"relative", background:"var(--surface-3)" }}>
                 {heist.cover_photo
                   ? <img src={heist.cover_photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#251a06", fontSize:36 }}>🎯</div>}
+                  : <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-faint)", fontSize:36 }}>🎯</div>}
               </div>
               <div style={{ padding:"12px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div onClick={() => setActiveHeist(heist)} style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color:"#e6def5", letterSpacing:"0.05em", flex:1 }}>{heist.name}</div>
+                <div onClick={() => setActiveHeist(heist)} style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color:"var(--text)", letterSpacing:"0.05em", flex:1 }}>{heist.name}</div>
                 {isAdmin && (
                   <div style={{ display:"flex", gap:6 }}>
-                    <label style={{ cursor:"pointer", color:"#352808", fontSize:12 }} title="Schimbă cover">
+                    <label style={{ cursor:"pointer", color:"var(--text-faint)", fontSize:12 }} title="Schimbă cover">
                       📷
                       <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>updateCover(heist.id, ev.target.result); r.readAsDataURL(f); }} />
                     </label>
-                    <button onClick={e => { e.stopPropagation(); deleteHeist(heist.id); }} style={{ background:"transparent", border:"none", color:"#2a1f06", fontSize:12, cursor:"pointer", padding:"0 2px" }}>✕</button>
+                    <button onClick={e => { e.stopPropagation(); deleteHeist(heist.id); }} style={{ background:"transparent", border:"none", color:"var(--text-faint)", fontSize:12, cursor:"pointer", padding:"0 2px" }}>✕</button>
                   </div>
                 )}
               </div>
@@ -1475,53 +1515,53 @@ function ZoneInfoSection({ isAdmin }) {
   };
 
   return (
-    <div style={{ padding:"20px 24px" }}>
+    <div className="ev-pad" style={{ padding:"20px 24px" }}>
       {lightbox && <Lightbox src={lightbox} onClose={() => setLightbox(null)} />}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"#e6def5" }}>INFORMAȚII ZONE</h2>
-          <div style={{ color:"#352808", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{items.length} fotografii</div>
+          <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"var(--text)" }}>INFORMAȚII ZONE</h2>
+          <div style={{ color:"var(--text-faint)", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{items.length} fotografii</div>
         </div>
-        {isAdmin && <button onClick={addItem} style={{ background:"#c9a030", border:"none", borderRadius:7, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ ADAUGĂ FOTO</button>}
+        {isAdmin && <button onClick={addItem} style={{ background:"var(--gold)", border:"none", borderRadius:7, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ ADAUGĂ FOTO</button>}
       </div>
 
       {loading ? (
         <SkeletonGrid count={6} minWidth={260} height={240} />
       ) : items.length === 0 ? (
-        <div style={{ background:"#050305", border:"1px dashed #1d1528", borderRadius:10, padding:"60px 24px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:14 }}>
+        <div style={{ background:"var(--bg)", border:"1px dashed var(--border)", borderRadius:10, padding:"60px 24px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:14 }}>
           Nicio fotografie. {isAdmin && "Apasă + pentru a adăuga."}
         </div>
       ) : (
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:16 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap:16 }}>
           {items.map(item => (
-            <div key={item.id} className="ev-grid-card" style={{ background:"#0f0a1c", border:"1px solid #171022", borderRadius:10, overflow:"hidden" }}>
+            <div key={item.id} className="ev-grid-card" style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:10, overflow:"hidden" }}>
               {item.photo ? (
                 <div onClick={() => setLightbox(item.photo)} style={{ cursor:"zoom-in", height:200, overflow:"hidden", position:"relative" }}>
                   <img src={item.photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", transition:"transform 0.2s" }}
                     onMouseEnter={e => e.target.style.transform="scale(1.04)"} onMouseLeave={e => e.target.style.transform="scale(1)"} />
-                  <div style={{ position:"absolute", bottom:6, right:8, background:"rgba(0,0,0,0.6)", borderRadius:4, padding:"2px 6px", color:"#aaa", fontSize:10 }}>🔍 zoom</div>
+                  <div style={{ position:"absolute", bottom:6, right:8, background:"var(--overlay)", borderRadius:4, padding:"2px 6px", color:"var(--text-muted)", fontSize:10 }}>🔍 zoom</div>
                 </div>
               ) : isAdmin ? (
-                <div style={{ height:180, background:"#050305", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                  <label style={{ cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:"#2a1f06" }}>
+                <div style={{ height:180, background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <label style={{ cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:"var(--text-faint)" }}>
                     <span style={{ fontSize:28 }}>📷</span>
                     <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11 }}>Încarcă foto</span>
                     <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>updateItem(item.id,{photo:ev.target.result}); r.readAsDataURL(f); }} />
                   </label>
                 </div>
               ) : (
-                <div style={{ height:120, background:"#100d06", display:"flex", alignItems:"center", justifyContent:"center", color:"#251a06", fontSize:24 }}>📷</div>
+                <div style={{ height:120, background:"var(--surface-3)", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-faint)", fontSize:24 }}>📷</div>
               )}
               <div style={{ padding:12 }}>
                 {isAdmin ? (
                   <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                     <textarea value={item.description||""} onChange={e => updateItem(item.id,{description:e.target.value})} placeholder="Descriere..." rows={2}
-                      style={{ background:"#0c0a04", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 8px", outline:"none", resize:"vertical" }}
-                      onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
-                    <button onClick={() => deleteItem(item.id)} style={{ background:"transparent", border:"1px solid #2e1a3d", color:"#f87171", borderRadius:5, padding:"4px", fontFamily:"'Barlow', sans-serif", fontSize:11, cursor:"pointer" }}>✕ Șterge</button>
+                      style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 8px", outline:"none", resize:"vertical" }}
+                      onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
+                    <button onClick={() => deleteItem(item.id)} style={{ background:"transparent", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:5, padding:"4px", fontFamily:"'Barlow', sans-serif", fontSize:11, cursor:"pointer" }}>✕ Șterge</button>
                   </div>
                 ) : item.description ? (
-                  <div style={{ color:"#aaa", fontFamily:"'Barlow', sans-serif", fontSize:13, lineHeight:1.5 }}>{item.description}</div>
+                  <div style={{ color:"var(--text-muted)", fontFamily:"'Barlow', sans-serif", fontSize:13, lineHeight:1.5 }}>{item.description}</div>
                 ) : null}
               </div>
             </div>
@@ -1535,12 +1575,12 @@ function ZoneInfoSection({ isAdmin }) {
 // ─── Zone Approvals Section ──────────────────────────────────────────────────
 const APPROVAL_DURATION_MS = 2 * 60 * 60 * 1000; // 2 hours
 const APPROVAL_STATUS_COLORS = {
-  Aprobat:   { bg:"#1a3a2a", text:"#4ade80", border:"#22c55e" },
-  Neaprobat: { bg:"#2e1a3d", text:"#f87171", border:"#ef4444" },
+  Aprobat:   { bg:"var(--success-bg)", text:"var(--success)", border:"var(--success)" },
+  Neaprobat: { bg:"var(--danger-bg)", text:"var(--danger)", border:"var(--danger)" },
 };
 const WEAPON_COLORS = {
-  "Cu Arma":   { bg:"#251a3d", text:"#fb923c", border:"#f97316" },
-  "Fara Arma": { bg:"#1a2a3a", text:"#60a5fa", border:"#3b82f6" },
+  "Cu Arma":   { bg:"var(--surface-hover)", text:"var(--warn)", border:"var(--warn)" },
+  "Fara Arma": { bg:"var(--info-bg)", text:"var(--info)", border:"var(--info)" },
 };
 
 function formatRemaining(ms) {
@@ -1674,32 +1714,32 @@ function ZoneApprovalsSection({ isAdmin }) {
   }
 
   return (
-    <div style={{ padding:"20px 24px" }}>
+    <div className="ev-pad" style={{ padding:"20px 24px" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, gap:12, flexWrap:"wrap" }}>
         <div>
-          <h2 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"#e6def5" }}>APROBĂRI ZONĂ</h2>
-          <div style={{ color:"#352808", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{items.length} aprobări{!isAdmin&&<span style={{ marginLeft:8, color:"#241a06" }}>· Vizualizare</span>}</div>
+          <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight:700, fontSize:22, color:"var(--text)" }}>APROBĂRI ZONĂ</h2>
+          <div style={{ color:"var(--text-faint)", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>{items.length} aprobări{!isAdmin&&<span style={{ marginLeft:8, color:"var(--text-faint)" }}>· Vizualizare</span>}</div>
         </div>
         {isAdmin && (showNew ? (
           <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
             <input autoFocus value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => { if(e.key==="Enter") create(); if(e.key==="Escape"){setShowNew(false);setNewName("");setNewCategory("oficiale");} }} placeholder="Nume zonă..."
-              style={{ background:"#100d06", border:"1px solid #c9a030", borderRadius:7, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 12px", outline:"none", width:220 }} />
-            <select value={newCategory} onChange={e => setNewCategory(e.target.value)} title="Categorie" style={{ background:"#100d06", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"7px 10px", outline:"none", cursor:"pointer" }}>
+              style={{ background:"var(--surface-3)", border:"1px solid var(--gold)", borderRadius:7, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"7px 12px", outline:"none", width:220 }} />
+            <select value={newCategory} onChange={e => setNewCategory(e.target.value)} title="Categorie" style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"7px 10px", outline:"none", cursor:"pointer" }}>
               {ORG_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
-            <button onClick={create} style={{ background:"#c9a030", border:"none", borderRadius:6, color:"#0e0a18", fontWeight:700, fontSize:12, padding:"7px 14px", cursor:"pointer" }}>✓</button>
-            <button onClick={() => {setShowNew(false);setNewName("");setNewCategory("oficiale");}} style={{ background:"transparent", border:"1px solid #201830", borderRadius:6, color:"#5a4210", fontSize:12, padding:"7px 12px", cursor:"pointer" }}>✕</button>
+            <button onClick={create} style={{ background:"var(--gold)", border:"none", borderRadius:6, color:"var(--on-gold)", fontWeight:700, fontSize:12, padding:"7px 14px", cursor:"pointer" }}>✓</button>
+            <button onClick={() => {setShowNew(false);setNewName("");setNewCategory("oficiale");}} style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:6, color:"var(--text-dim)", fontSize:12, padding:"7px 12px", cursor:"pointer" }}>✕</button>
           </div>
         ) : (
-          <button onClick={() => setShowNew(true)} style={{ background:"#c9a030", border:"none", borderRadius:7, color:"#0e0a18", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ APROBARE NOUĂ</button>
+          <button onClick={() => setShowNew(true)} style={{ background:"var(--gold)", border:"none", borderRadius:7, color:"var(--on-gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"7px 16px", cursor:"pointer" }}>+ APROBARE NOUĂ</button>
         ))}
       </div>
 
       {loading ? (
         ORG_CATEGORIES.map((cat, catIdx) => (
           <div key={cat.key} style={{ marginBottom: catIdx === ORG_CATEGORIES.length-1 ? 0 : 28 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, paddingBottom:8, borderBottom:"1px solid #1c1728" }}>
-              <div style={{ width:3, height:16, background:"#1a1506", borderRadius:2 }} />
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, paddingBottom:8, borderBottom:"1px solid var(--border)" }}>
+              <div style={{ width:3, height:16, background:"var(--surface-3)", borderRadius:2 }} />
               <SkeletonBox height={14} width={180} />
             </div>
             <SkeletonGrid count={4} minWidth={260} height={300} />
@@ -1710,15 +1750,15 @@ function ZoneApprovalsSection({ isAdmin }) {
         const emptySlots = Math.max(0, SPOTS_PER_CATEGORY - catItems.length);
         return (
           <div key={cat.key} style={{ marginBottom: catIdx === ORG_CATEGORIES.length-1 ? 0 : 28 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, paddingBottom:8, borderBottom:"1px solid #1c1728" }}>
-              <div style={{ width:3, height:16, background:"#c9a030", borderRadius:2 }} />
-              <h3 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, color:"#c9a030", letterSpacing:"0.12em", textTransform:"uppercase" }}>{cat.label}</h3>
-              <span style={{ color:"#352808", fontSize:11, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.08em" }}>{catItems.length} / {SPOTS_PER_CATEGORY}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12, paddingBottom:8, borderBottom:"1px solid var(--border)" }}>
+              <div style={{ width:3, height:16, background:"var(--gold)", borderRadius:2 }} />
+              <h3 style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, color:"var(--gold)", letterSpacing:"0.12em", textTransform:"uppercase" }}>{cat.label}</h3>
+              <span style={{ color:"var(--text-faint)", fontSize:11, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.08em" }}>{catItems.length} / {SPOTS_PER_CATEGORY}</span>
               {isAdmin && catItems.length < SPOTS_PER_CATEGORY && (
-                <button onClick={() => { setNewCategory(cat.key); setShowNew(true); }} style={{ marginLeft:"auto", background:"transparent", border:"1px solid #1a1506", borderRadius:5, color:"#6a5218", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 10px", cursor:"pointer" }}>+ adaugă aici</button>
+                <button onClick={() => { setNewCategory(cat.key); setShowNew(true); }} style={{ marginLeft:"auto", background:"transparent", border:"1px solid var(--border)", borderRadius:5, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:11, padding:"3px 10px", cursor:"pointer" }}>+ adaugă aici</button>
               )}
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(260px, 1fr))", gap:14 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(min(260px, 100%), 1fr))", gap:14 }}>
               {catItems.map(item => {
                 const eff = getEffectiveStatus(item);
                 const sc = APPROVAL_STATUS_COLORS[eff];
@@ -1727,28 +1767,28 @@ function ZoneApprovalsSection({ isAdmin }) {
                 const showTimer = eff === "Aprobat" && remaining > 0;
                 const pct = showTimer ? Math.max(0, Math.min(100, (remaining / APPROVAL_DURATION_MS) * 100)) : 0;
                 return (
-              <div key={item.id} className="ev-approval-card" style={{ background:"#0f0a1c", border:`1px solid ${eff==="Aprobat"?"#1f3a2a":"#1a1426"}`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column" }}>
+              <div key={item.id} className="ev-approval-card" style={{ background:"var(--surface-2)", border:`1px solid ${eff==="Aprobat"?"var(--success-border)":"var(--border)"}`, borderRadius:12, overflow:"hidden", display:"flex", flexDirection:"column" }}>
                 {/* Logo / cover */}
-                <div style={{ position:"relative", height:140, background:"#0c0a04", borderBottom:"1px solid #1e1e1e", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
+                <div style={{ position:"relative", height:140, background:"var(--surface-2)", borderBottom:"1px solid var(--disabled)", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden" }}>
                   {item.logo ? (
                     <>
                       <img src={item.logo} alt="" aria-hidden="true" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", filter:"blur(22px) brightness(0.45)", transform:"scale(1.15)" }} />
-                      <img src={item.logo} alt="" style={{ position:"relative", maxWidth:"82%", maxHeight:"82%", width:"auto", height:"auto", objectFit:"contain", filter:"drop-shadow(0 4px 10px rgba(0,0,0,0.55))" }} />
+                      <img src={item.logo} alt="" style={{ position:"relative", maxWidth:"82%", maxHeight:"82%", width:"auto", height:"auto", objectFit:"contain", filter:"drop-shadow(0 4px 10px var(--overlay))" }} />
                     </>
                   ) : (
-                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:"#251a06" }}>
+                    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, color:"var(--text-faint)" }}>
                       <span style={{ fontSize:34 }}>🏷️</span>
                       <span style={{ fontSize:11, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em" }}>FĂRĂ LOGO</span>
                     </div>
                   )}
                   {isAdmin && (
                     <div style={{ position:"absolute", top:8, right:8, display:"flex", gap:6 }}>
-                      <label title={item.logo?"Schimbă logo":"Adaugă logo"} style={{ cursor:"pointer", background:"rgba(0,0,0,0.65)", border:"1px solid #1a1506", borderRadius:6, color:"#c9a030", fontSize:12, padding:"4px 8px", fontFamily:"'Barlow', sans-serif", display:"flex", alignItems:"center", gap:4 }}>
+                      <label title={item.logo?"Schimbă logo":"Adaugă logo"} style={{ cursor:"pointer", background:"var(--overlay)", border:"1px solid var(--border)", borderRadius:6, color:"var(--gold)", fontSize:12, padding:"4px 8px", fontFamily:"'Barlow', sans-serif", display:"flex", alignItems:"center", gap:4 }}>
                         📷 {item.logo?"Schimbă":"Logo"}
                         <input type="file" accept="image/*" style={{ display:"none" }} onChange={e => { const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>update(item.id,{logo:ev.target.result}); r.readAsDataURL(f); e.target.value=""; }} />
                       </label>
                       {item.logo && (
-                        <button onClick={() => update(item.id, { logo:null })} title="Șterge logo" style={{ background:"rgba(0,0,0,0.65)", border:"1px solid #2e1a3d", color:"#f87171", borderRadius:6, padding:"4px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Barlow', sans-serif" }}>✕</button>
+                        <button onClick={() => update(item.id, { logo:null })} title="Șterge logo" style={{ background:"var(--overlay)", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:6, padding:"4px 8px", fontSize:12, cursor:"pointer", fontFamily:"'Barlow', sans-serif" }}>✕</button>
                       )}
                     </div>
                   )}
@@ -1758,7 +1798,7 @@ function ZoneApprovalsSection({ isAdmin }) {
                   </div>
                   {/* Weapon icon badge — bottom-left */}
                   <div title={item.weapon || "Fara Arma"}
-                    style={{ position:"absolute", bottom:8, left:8, width:30, height:30, borderRadius:"50%", background:wc.bg, border:`1px solid ${wc.border}`, color:wc.text, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, boxShadow:"0 2px 6px rgba(0,0,0,0.5)" }}>
+                    style={{ position:"absolute", bottom:8, left:8, width:30, height:30, borderRadius:"50%", background:wc.bg, border:`1px solid ${wc.border}`, color:wc.text, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, boxShadow:"0 2px 6px var(--surface-3)" }}>
                     {(item.weapon||"Fara Arma")==="Cu Arma" ? "🔫" : "🚫"}
                   </div>
                 </div>
@@ -1767,10 +1807,10 @@ function ZoneApprovalsSection({ isAdmin }) {
                 <div style={{ padding:"12px 14px 8px" }}>
                   {isAdmin ? (
                     <input value={item.name||""} onChange={e => setItems(prev => prev.map(i => i.id===item.id?{...i,name:e.target.value}:i))} onBlur={e => renameItem(item.id, e.target.value)} placeholder="Nume zonă..."
-                      style={{ background:"transparent", border:"1px solid transparent", borderRadius:5, color:"#e6def5", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:18, letterSpacing:"0.05em", padding:"4px 6px", width:"100%", outline:"none" }}
-                      onFocus={e => e.target.style.borderColor="#1a1506"} />
+                      style={{ background:"transparent", border:"1px solid transparent", borderRadius:5, color:"var(--text)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:18, letterSpacing:"0.05em", padding:"4px 6px", width:"100%", outline:"none" }}
+                      onFocus={e => e.target.style.borderColor="var(--border)"} />
                   ) : (
-                    <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:18, color:"#e6def5", letterSpacing:"0.05em", padding:"4px 6px" }}>{item.name||<span style={{ color:"#2a1f06" }}>Fără Nume</span>}</div>
+                    <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:18, color:"var(--text)", letterSpacing:"0.05em", padding:"4px 6px" }}>{item.name||<span style={{ color:"var(--text-faint)" }}>Fără Nume</span>}</div>
                   )}
                 </div>
 
@@ -1778,21 +1818,21 @@ function ZoneApprovalsSection({ isAdmin }) {
                 {showTimer ? (
                   <div style={{ padding:"0 14px 12px" }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:5 }}>
-                      <span style={{ color:"#5a4210", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em" }}>EXPIRĂ ÎN</span>
-                      <span style={{ color:"#c9a030", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, letterSpacing:"0.08em" }}>⏱ {formatRemaining(remaining)}</span>
+                      <span style={{ color:"var(--text-dim)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em" }}>EXPIRĂ ÎN</span>
+                      <span style={{ color:"var(--gold)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:15, letterSpacing:"0.08em" }}>⏱ {formatRemaining(remaining)}</span>
                     </div>
-                    <div style={{ height:4, background:"#100d06", borderRadius:2, overflow:"hidden" }}>
-                      <div style={{ width:`${pct}%`, height:"100%", background:"linear-gradient(90deg, #22c55e, #c9a030)", transition:"width 1s linear" }} />
+                    <div style={{ height:4, background:"var(--surface-3)", borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ width:`${pct}%`, height:"100%", background:"linear-gradient(90deg, var(--success), var(--gold))", transition:"width 1s linear" }} />
                     </div>
                   </div>
                 ) : (
                   <div style={{ padding:"0 14px 12px" }}>
-                    <div style={{ height:4, background:"#100d06", borderRadius:2 }} />
+                    <div style={{ height:4, background:"var(--surface-3)", borderRadius:2 }} />
                   </div>
                 )}
 
                 {/* Action buttons */}
-                <div style={{ padding:"10px 14px", borderTop:"1px solid #0e0a02", display:"flex", gap:8, alignItems:"center", marginTop:"auto" }}>
+                <div style={{ padding:"10px 14px", borderTop:"1px solid var(--border)", display:"flex", gap:8, alignItems:"center", marginTop:"auto" }}>
                   <button onClick={() => toggleStatus(item)} disabled={!isAdmin}
                     style={{ flex:1, background:sc.bg, color:sc.text, border:`1px solid ${sc.border}`, borderRadius:6, padding:"6px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:isAdmin?"pointer":"default", letterSpacing:"0.05em", whiteSpace:"nowrap", opacity:isAdmin?1:0.85 }}>
                     {eff}{isAdmin && " ▾"}
@@ -1802,7 +1842,7 @@ function ZoneApprovalsSection({ isAdmin }) {
                     {item.weapon || "Fara Arma"}{isAdmin && " ▾"}
                   </button>
                   {isAdmin && (
-                    <button onClick={() => remove(item.id)} title="Șterge" style={{ background:"transparent", border:"1px solid #2e1a3d", color:"#f87171", borderRadius:6, padding:"6px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>✕</button>
+                    <button onClick={() => remove(item.id)} title="Șterge" style={{ background:"transparent", border:"1px solid var(--danger-border)", color:"var(--danger)", borderRadius:6, padding:"6px 10px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, cursor:"pointer" }}>✕</button>
                   )}
                 </div>
               </div>
@@ -1811,9 +1851,9 @@ function ZoneApprovalsSection({ isAdmin }) {
               {Array.from({ length: emptySlots }).map((_, i) => (
                 <div key={`empty-${cat.key}-${i}`}
                   onClick={() => { if (isAdmin) { setNewCategory(cat.key); setShowNew(true); } }}
-                  style={{ minHeight:300, background:"#0e0e0e", border:"1px dashed #1f1f1f", borderRadius:12, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, color:"#2e2e2e", cursor:isAdmin?"pointer":"default", transition:"border-color 0.15s, color 0.15s" }}
-                  onMouseEnter={e => { if(isAdmin){ e.currentTarget.style.borderColor="#241a06"; e.currentTarget.style.color="#555"; } }}
-                  onMouseLeave={e => { if(isAdmin){ e.currentTarget.style.borderColor="#1f1f1f"; e.currentTarget.style.color="#2e2e2e"; } }}>
+                  style={{ minHeight:300, background:"var(--surface-2)", border:"1px dashed var(--border)", borderRadius:12, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:8, color:"var(--text-faint)", cursor:isAdmin?"pointer":"default", transition:"border-color 0.15s, color 0.15s" }}
+                  onMouseEnter={e => { if(isAdmin){ e.currentTarget.style.borderColor="var(--border-strong)"; e.currentTarget.style.color="var(--text-dim)"; } }}
+                  onMouseLeave={e => { if(isAdmin){ e.currentTarget.style.borderColor="var(--border)"; e.currentTarget.style.color="var(--text-faint)"; } }}>
                   <span style={{ fontSize:28 }}>{isAdmin ? "+" : "·"}</span>
                   <span style={{ fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.15em", textTransform:"uppercase" }}>Spot Liber</span>
                 </div>
@@ -1860,14 +1900,14 @@ const INITIAL_HALF_V = [
 ];
 
 function PuncteRuleRow({ rule, isAdmin, hasValue, onEdit, onDelete }) {
-  const labelStyle = { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "#a89cc8", flex: 1 };
+  const labelStyle = { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "var(--text-muted)", flex: 1 };
   const valueStyle = {
     fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14,
-    color: "#c9a030", letterSpacing: "0.06em", whiteSpace: "nowrap", marginLeft: 16,
+    color: "var(--gold)", letterSpacing: "0.06em", whiteSpace: "nowrap", marginLeft: 16,
   };
   const rowStyle = {
     display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "8px 12px", borderRadius: 7, background: "#100c1c", border: "1px solid #252525",
+    padding: "8px 12px", borderRadius: 7, background: "var(--surface-2)", border: "1px solid var(--border)",
     gap: 8,
   };
   return (
@@ -1877,9 +1917,9 @@ function PuncteRuleRow({ rule, isAdmin, hasValue, onEdit, onDelete }) {
       {isAdmin && (
         <div style={{ display: "flex", gap: 4, flexShrink: 0, marginLeft: 8 }}>
           <button onClick={() => onEdit(rule)} title="Editează"
-            style={{ background: "transparent", border: "1px solid #241a06", color: "#c9a030", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✎</button>
+            style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--gold)", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✎</button>
           <button onClick={() => onDelete(rule.id)} title="Șterge"
-            style={{ background: "transparent", border: "1px solid #2e1a3d", color: "#f87171", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✕</button>
+            style={{ background: "transparent", border: "1px solid var(--danger-border)", color: "var(--danger)", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✕</button>
         </div>
       )}
     </div>
@@ -1887,17 +1927,17 @@ function PuncteRuleRow({ rule, isAdmin, hasValue, onEdit, onDelete }) {
 }
 
 function PuncteHalfVRow({ rule, isAdmin, onEdit, onDelete }) {
-  const labelStyle = { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "#a89cc8", flex: 1 };
+  const labelStyle = { fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "var(--text-muted)", flex: 1 };
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-      <span style={{ color: "#c9a030", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>—</span>
+      <span style={{ color: "var(--gold)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>—</span>
       <span style={labelStyle}>{rule.label}</span>
       {isAdmin && (
         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
           <button onClick={() => onEdit(rule)} title="Editează"
-            style={{ background: "transparent", border: "1px solid #241a06", color: "#c9a030", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✎</button>
+            style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--gold)", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✎</button>
           <button onClick={() => onDelete(rule.id)} title="Șterge"
-            style={{ background: "transparent", border: "1px solid #2e1a3d", color: "#f87171", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✕</button>
+            style={{ background: "transparent", border: "1px solid var(--danger-border)", color: "var(--danger)", borderRadius: 5, padding: "2px 7px", fontSize: 11, cursor: "pointer", fontFamily: "'Barlow', sans-serif" }}>✕</button>
         </div>
       )}
     </div>
@@ -1908,35 +1948,35 @@ function EditRuleModal({ rule, hasValue, onSave, onClose }) {
   const [label, setLabel] = useState(rule.label);
   const [value, setValue] = useState(rule.value);
   const inputStyle = {
-    background: "#100c1c", border: "1px solid #2a2a2a", borderRadius: 6,
-    color: "#e6def5", fontFamily: "'Barlow', sans-serif", fontSize: 13,
+    background: "var(--surface-2)", border: "1px solid var(--disabled)", borderRadius: 6,
+    color: "var(--text)", fontFamily: "'Barlow', sans-serif", fontSize: 13,
     padding: "7px 10px", outline: "none", width: "100%",
   };
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 12, padding: 28, width: 420, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: "#c9a030", letterSpacing: "0.1em" }}>EDITEAZĂ REGULĂ</div>
+    <div style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div style={{ background: "var(--surface-2)", border: "1px solid var(--disabled)", borderRadius: 12, padding: 28, width: 420, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: "var(--gold)", letterSpacing: "0.1em" }}>EDITEAZĂ REGULĂ</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "#666", letterSpacing: "0.08em", textTransform: "uppercase" }}>Descriere</label>
+          <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Descriere</label>
           <textarea value={label} onChange={e => setLabel(e.target.value)} rows={3}
             style={{ ...inputStyle, resize: "vertical" }}
-            onFocus={e => e.target.style.borderColor = "#c9a030"} onBlur={e => e.target.style.borderColor = "#1a1506"} />
+            onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
         </div>
         {hasValue && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "#666", letterSpacing: "0.08em", textTransform: "uppercase" }}>Valoare (ex: 10 puncte)</label>
+            <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Valoare (ex: 10 puncte)</label>
             <input value={value} onChange={e => setValue(e.target.value)}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = "#c9a030"} onBlur={e => e.target.style.borderColor = "#1a1506"} />
+              onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <button onClick={() => onSave({ label, value })}
-            style={{ flex: 1, background: "#c9a030", border: "none", borderRadius: 6, color: "#0e0a18", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, padding: "8px", cursor: "pointer" }}>
+            style={{ flex: 1, background: "var(--gold)", border: "none", borderRadius: 6, color: "var(--on-gold)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, padding: "8px", cursor: "pointer" }}>
             SALVEAZĂ
           </button>
           <button onClick={onClose}
-            style={{ flex: 1, background: "transparent", border: "1px solid #333", borderRadius: 6, color: "#666", fontFamily: "'Barlow', sans-serif", fontSize: 13, padding: "8px", cursor: "pointer" }}>
+            style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-dim)", fontFamily: "'Barlow', sans-serif", fontSize: 13, padding: "8px", cursor: "pointer" }}>
             Anulează
           </button>
         </div>
@@ -1949,35 +1989,35 @@ function AddRuleModal({ category, hasValue, maxOrder, onSave, onClose }) {
   const [label, setLabel] = useState("");
   const [value, setValue] = useState("");
   const inputStyle = {
-    background: "#100c1c", border: "1px solid #2a2a2a", borderRadius: 6,
-    color: "#e6def5", fontFamily: "'Barlow', sans-serif", fontSize: 13,
+    background: "var(--surface-2)", border: "1px solid var(--disabled)", borderRadius: 6,
+    color: "var(--text)", fontFamily: "'Barlow', sans-serif", fontSize: 13,
     padding: "7px 10px", outline: "none", width: "100%",
   };
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: "#141414", border: "1px solid #2a2a2a", borderRadius: 12, padding: 28, width: 420, display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: "#c9a030", letterSpacing: "0.1em" }}>ADAUGĂ REGULĂ</div>
+    <div style={{ position: "fixed", inset: 0, background: "var(--overlay)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+      <div style={{ background: "var(--surface-2)", border: "1px solid var(--disabled)", borderRadius: 12, padding: 28, width: 420, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, color: "var(--gold)", letterSpacing: "0.1em" }}>ADAUGĂ REGULĂ</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "#666", letterSpacing: "0.08em", textTransform: "uppercase" }}>Descriere</label>
+          <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Descriere</label>
           <textarea value={label} onChange={e => setLabel(e.target.value)} rows={3}
             style={{ ...inputStyle, resize: "vertical" }}
-            onFocus={e => e.target.style.borderColor = "#c9a030"} onBlur={e => e.target.style.borderColor = "#1a1506"} />
+            onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
         </div>
         {hasValue && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "#666", letterSpacing: "0.08em", textTransform: "uppercase" }}>Valoare (ex: 10 puncte)</label>
+            <label style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: "var(--text-dim)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Valoare (ex: 10 puncte)</label>
             <input value={value} onChange={e => setValue(e.target.value)}
               style={inputStyle}
-              onFocus={e => e.target.style.borderColor = "#c9a030"} onBlur={e => e.target.style.borderColor = "#1a1506"} />
+              onFocus={e => e.target.style.borderColor = "var(--gold)"} onBlur={e => e.target.style.borderColor = "var(--border)"} />
           </div>
         )}
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <button onClick={() => label.trim() && onSave({ label: label.trim(), value: value.trim(), sort_order: maxOrder + 1 })}
-            style={{ flex: 1, background: "#c9a030", border: "none", borderRadius: 6, color: "#0e0a18", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, padding: "8px", cursor: "pointer" }}>
+            style={{ flex: 1, background: "var(--gold)", border: "none", borderRadius: 6, color: "var(--on-gold)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, padding: "8px", cursor: "pointer" }}>
             ADAUGĂ
           </button>
           <button onClick={onClose}
-            style={{ flex: 1, background: "transparent", border: "1px solid #333", borderRadius: 6, color: "#666", fontFamily: "'Barlow', sans-serif", fontSize: 13, padding: "8px", cursor: "pointer" }}>
+            style={{ flex: 1, background: "transparent", border: "1px solid var(--border)", borderRadius: 6, color: "var(--text-dim)", fontFamily: "'Barlow', sans-serif", fontSize: 13, padding: "8px", cursor: "pointer" }}>
             Anulează
           </button>
         </div>
@@ -2034,35 +2074,35 @@ function SistemPuncteSection({ isAdmin }) {
   const halfVRows = catRules("half_v_reguli");
 
   const cardStyle = {
-    background: "#121212", border: "1px solid #222", borderRadius: 14,
+    background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 14,
     padding: "22px 24px", display: "flex", flexDirection: "column", gap: 14,
   };
   const headingStyle = {
-    fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: "#c9a030",
+    fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 15, color: "var(--gold)",
     letterSpacing: "0.15em", textTransform: "uppercase",
-    borderBottom: "1px solid #1e1e1e", paddingBottom: 12,
+    borderBottom: "1px solid var(--disabled)", paddingBottom: 12,
     display: "flex", alignItems: "center", justifyContent: "space-between",
   };
   const addBtnStyle = {
-    background: "transparent", border: "1px dashed #252525", borderRadius: 7,
-    color: "#444", fontFamily: "'Barlow', sans-serif", fontSize: 11, padding: "6px 10px",
+    background: "transparent", border: "1px dashed var(--border)", borderRadius: 7,
+    color: "var(--text-faint)", fontFamily: "'Barlow', sans-serif", fontSize: 11, padding: "6px 10px",
     cursor: "pointer", letterSpacing: "0.05em", transition: "border-color 0.15s, color 0.15s",
   };
 
   const MobRow = ({ rule, cat }) => {
     const hasVal = cat === "puncte_mobs" || cat === "ajutor_vendettas";
     return (
-      <div className="ev-p-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 8, background: "#0d0d0d", border: "1px solid #1e1e1e" }}>
-        <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "#a89cc8", flex: 1, lineHeight: 1.4 }}>{rule.label}</span>
+      <div className="ev-p-row" style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 12px", borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--disabled)" }}>
+        <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "var(--text-muted)", flex: 1, lineHeight: 1.4 }}>{rule.label}</span>
         {hasVal && rule.value && (
-          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, color: "#c9a030", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{rule.value}</span>
+          <span style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 14, color: "var(--gold)", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{rule.value}</span>
         )}
         {isAdmin && (
           <div style={{ display: "flex", gap: 3, flexShrink: 0, marginLeft: 4 }}>
             <button onClick={() => setEditingRule({ ...rule, category: cat })} title="Editează"
-              style={{ background: "transparent", border: "1px solid #241a06", color: "#c9a030", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
+              style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--gold)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
             <button onClick={() => deleteRule(rule.id)} title="Șterge"
-              style={{ background: "transparent", border: "1px solid #2e1a3d", color: "#f87171", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
+              style={{ background: "transparent", border: "1px solid var(--danger-border)", color: "var(--danger)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
           </div>
         )}
       </div>
@@ -2070,15 +2110,15 @@ function SistemPuncteSection({ isAdmin }) {
   };
 
   const RegRow = ({ rule }) => (
-    <div className="ev-reg-row" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 4px", borderBottom: "1px solid #181818", borderRadius:4 }}>
-      <span style={{ color: "#c9a030", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, lineHeight: 1.3, flexShrink: 0 }}>•</span>
-      <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "#8a7fa8", flex: 1, lineHeight: 1.55 }}>{rule.label}</span>
+    <div className="ev-reg-row" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 4px", borderBottom: "1px solid var(--border)", borderRadius:4 }}>
+      <span style={{ color: "var(--gold)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 16, lineHeight: 1.3, flexShrink: 0 }}>•</span>
+      <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "var(--text-muted)", flex: 1, lineHeight: 1.55 }}>{rule.label}</span>
       {isAdmin && (
         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
           <button onClick={() => setEditingRule({ ...rule, category: "regulament" })} title="Editează"
-            style={{ background: "transparent", border: "1px solid #241a06", color: "#c9a030", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
+            style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--gold)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
           <button onClick={() => deleteRule(rule.id)} title="Șterge"
-            style={{ background: "transparent", border: "1px solid #2e1a3d", color: "#f87171", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
+            style={{ background: "transparent", border: "1px solid var(--danger-border)", color: "var(--danger)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
         </div>
       )}
     </div>
@@ -2086,14 +2126,14 @@ function SistemPuncteSection({ isAdmin }) {
 
   const HalfVRow = ({ rule }) => (
     <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
-      <span style={{ color: "#c9a030", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, lineHeight: 1.5, flexShrink: 0 }}>—</span>
-      <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "#8a7fa8", flex: 1, lineHeight: 1.5 }}>{rule.label}</span>
+      <span style={{ color: "var(--gold)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, lineHeight: 1.5, flexShrink: 0 }}>—</span>
+      <span style={{ fontFamily: "'Barlow', sans-serif", fontSize: 13, color: "var(--text-muted)", flex: 1, lineHeight: 1.5 }}>{rule.label}</span>
       {isAdmin && (
         <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
           <button onClick={() => setEditingRule({ ...rule, category: "half_v_reguli" })} title="Editează"
-            style={{ background: "transparent", border: "1px solid #241a06", color: "#c9a030", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
+            style={{ background: "transparent", border: "1px solid var(--border-strong)", color: "var(--gold)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✎</button>
           <button onClick={() => deleteRule(rule.id)} title="Șterge"
-            style={{ background: "transparent", border: "1px solid #2e1a3d", color: "#f87171", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
+            style={{ background: "transparent", border: "1px solid var(--danger-border)", color: "var(--danger)", borderRadius: 4, padding: "2px 6px", fontSize: 10, cursor: "pointer" }}>✕</button>
         </div>
       )}
     </div>
@@ -2122,11 +2162,11 @@ function SistemPuncteSection({ isAdmin }) {
       )}
 
       <div style={{ marginBottom: 22 }}>
-        <h2 style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: "#e6def5", letterSpacing: "0.1em" }}>SISTEM PUNCTE</h2>
-        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "#444", marginTop: 2, letterSpacing: "0.04em" }}>Regulamentul intern al facțiunii</p>
+        <h2 className="ev-section-title" style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 800, fontSize: 24, color: "var(--text)", letterSpacing: "0.1em" }}>SISTEM PUNCTE</h2>
+        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "var(--text-faint)", marginTop: 2, letterSpacing: "0.04em" }}>Regulamentul intern al facțiunii</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(340px, 100%), 1fr))", gap: 16 }}>
 
         {/* PUNCTE SICARIOS */}
         <div style={cardStyle}>
@@ -2161,14 +2201,14 @@ function SistemPuncteSection({ isAdmin }) {
           </div>
 
           {/* CERINTE HALF V sub-section */}
-          <div style={{ marginTop: 8, background: "#0a0a0a", border: "1px solid #241a06", borderRadius: 10, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ marginTop: 8, background: "var(--surface-2)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-              <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, color: "#c9a030", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, color: "var(--gold)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
                 Cerințe Half V
               </div>
               {isAdmin && <button className="ev-add-dashed" style={addBtnStyle} onClick={() => setAddingCategory({ key: "half_v_reguli", hasValue: false })}>+ Adaugă</button>}
             </div>
-            <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "#555", margin: 0 }}>Trecerea de la Old Mob la Half V vine cu un anumit set de reguli:</p>
+            <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "var(--text-dim)", margin: 0 }}>Trecerea de la Old Mob la Half V vine cu un anumit set de reguli:</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {halfVRows.map(r => <HalfVRow key={r.id} rule={r} />)}
             </div>
@@ -2305,24 +2345,24 @@ function AdminPanelSection({ role, currentUser }) {
   };
 
   const tabBtn = (label, key) => (
-    <button key={key} onClick={() => setPanelTab(key)} style={{ background:"transparent", border:"none", borderBottom: panelTab===key?"2px solid #c9a030":"2px solid transparent", color: panelTab===key?"#e6def5":"#555", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:13, padding:"0 18px", height:42, cursor:"pointer", letterSpacing:"0.04em", whiteSpace:"nowrap" }}>
+    <button key={key} onClick={() => setPanelTab(key)} style={{ background:"transparent", border:"none", borderBottom: panelTab===key?"2px solid var(--gold)":"2px solid transparent", color: panelTab===key?"var(--text)":"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:13, padding:"0 18px", height:42, cursor:"pointer", letterSpacing:"0.04em", whiteSpace:"nowrap" }}>
       {label}
     </button>
   );
 
-  const inp = { background:"#050305", border:"1px solid #1a1506", borderRadius:6, color:"#e6def5", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"8px 12px", outline:"none", width:"100%" };
+  const inp = { background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"8px 12px", outline:"none", width:"100%" };
   const canSubmit = addNickname.trim() && addPassword.trim() && (isGA || a2Password.trim());
 
   return (
     <div style={{ padding:"24px", maxWidth:900, margin:"0 auto", display:"flex", flexDirection:"column", gap:24 }}>
       <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
         <div className="ev-gold-text" style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:20, letterSpacing:"0.12em" }}>PANEL {isGA ? "ADMIN" : "ADMIN 2"}</div>
-        <div style={{ color:"#352808", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>
-          Conectat ca: <span style={{ color:"#c9a030" }}>{currentUser?.nickname || currentUser?.email}</span>
+        <div style={{ color:"var(--text-faint)", fontSize:12, fontFamily:"'Barlow', sans-serif" }}>
+          Conectat ca: <span style={{ color:"var(--gold)" }}>{currentUser?.nickname || currentUser?.email}</span>
         </div>
       </div>
 
-      <div style={{ display:"flex", borderBottom:"1px solid #1c1728" }}>
+      <div style={{ display:"flex", borderBottom:"1px solid var(--border)" }}>
         {tabBtn("CONTURI", "conturi")}
         {tabBtn("JURNALE ACȚIUNI", "jurnale")}
         {isGA && tabBtn("SETĂRI CONT", "setari")}
@@ -2330,8 +2370,8 @@ function AdminPanelSection({ role, currentUser }) {
 
       {panelTab === "conturi" && (
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ background:"#0b0715", border:"1px solid #0e0a02", borderRadius:10, padding:"18px 20px", display:"flex", flexDirection:"column", gap:12 }}>
-            <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, color:"#c9a030", letterSpacing:"0.08em" }}>{isGA ? "ADAUGĂ CONT" : "ADAUGĂ CONT MEMBRU"}</div>
+          <div style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:10, padding:"18px 20px", display:"flex", flexDirection:"column", gap:12 }}>
+            <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, color:"var(--gold)", letterSpacing:"0.08em" }}>{isGA ? "ADAUGĂ CONT" : "ADAUGĂ CONT MEMBRU"}</div>
             {isGA && (
               <div style={{ display:"flex", gap:8 }}>
                 <select value={addRole} onChange={e => setAddRole(e.target.value)} style={{ ...inp, cursor:"pointer" }}>
@@ -2342,60 +2382,60 @@ function AdminPanelSection({ role, currentUser }) {
             )}
             <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
               <input value={addNickname} onChange={e => setAddNickname(e.target.value)} placeholder="Nickname (nou cont)"
-                style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
+                style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
               <input type="password" value={addPassword} onChange={e => setAddPassword(e.target.value)} onKeyDown={e => e.key==="Enter" && addAccount()} placeholder="Parolă (nou cont)"
-                style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
+                style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
             </div>
             {!isGA && (
               <input type="password" value={a2Password} onChange={e => setA2Password(e.target.value)} onKeyDown={e => e.key==="Enter" && addAccount()} placeholder="Parola ta de Admin 2 (confirmare)"
-                style={inp} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
+                style={inp} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
             )}
             <button onClick={addAccount} disabled={addLoading || !canSubmit}
-              style={{ alignSelf:"flex-start", background:canSubmit?"#c9a030":"#1c1728", border:"none", borderRadius:6, color:canSubmit?"#0e0a18":"#444", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 24px", cursor:canSubmit?"pointer":"default", whiteSpace:"nowrap" }}>
+              style={{ alignSelf:"flex-start", background:canSubmit?"var(--gold)":"var(--border)", border:"none", borderRadius:6, color:canSubmit?"var(--on-gold)":"var(--border-strong)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 24px", cursor:canSubmit?"pointer":"default", whiteSpace:"nowrap" }}>
               {addLoading ? "..." : "+ ADAUGĂ CONT"}
             </button>
-            {addError && <div style={{ color:"#f87171", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{addError}</div>}
-            {addOk && <div style={{ color:"#4ade80", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{addOk}</div>}
+            {addError && <div style={{ color:"var(--danger)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{addError}</div>}
+            {addOk && <div style={{ color:"var(--success)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{addOk}</div>}
           </div>
 
           {isGA && (
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            <div style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>
+            <div style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>
               CONTURI ACTIVE ({accountList.length})
             </div>
             {accountList.length === 0 ? (
-              <div style={{ background:"#0b0715", border:"1px dashed #1d1528", borderRadius:8, padding:"28px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>
+              <div style={{ background:"var(--surface-1)", border:"1px dashed var(--border)", borderRadius:8, padding:"28px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>
                 Niciun cont adăugat încă.
               </div>
             ) : accountList.map(entry => (
-              <div key={entry.id} className="ev-list-row" style={{ background:"#0b0715", border:"1px solid #1c1728", borderRadius:8, padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
+              <div key={entry.id} className="ev-list-row" style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:8, padding:"12px 16px", display:"flex", flexDirection:"column", gap:10 }}>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
                   <div style={{ display:"flex", flexDirection:"column", gap:3 }}>
-                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:14, color:"#e6def5" }}>{entry.nickname}</span>
-                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:entry.role==="admin2"?"#60a5fa":"#a3e635" }}>{entry.role==="admin2"?"Admin 2":"Membru"} · Adăugat {new Date(entry.created_at).toLocaleDateString("ro-RO")}</span>
+                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:14, color:"var(--text)" }}>{entry.nickname}</span>
+                    <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:entry.role==="admin2"?"var(--info)":"var(--success)" }}>{entry.role==="admin2"?"Admin 2":"Membru"} · Adăugat {new Date(entry.created_at).toLocaleDateString("ro-RO")}</span>
                   </div>
                   <div style={{ display:"flex", gap:8 }}>
                     <button onClick={() => resetId === entry.id ? cancelReset() : openReset(entry)}
-                      style={{ background:"transparent", border:"1px solid #251a3d", borderRadius:6, color:"#c9a030", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"5px 14px", cursor:"pointer" }}>
+                      style={{ background:"transparent", border:"1px solid var(--border)", borderRadius:6, color:"var(--gold)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"5px 14px", cursor:"pointer" }}>
                       {resetId === entry.id ? "Anulează" : "Resetează parola"}
                     </button>
                     <button onClick={() => removeAccount(entry)}
-                      style={{ background:"transparent", border:"1px solid #2e1a3d", borderRadius:6, color:"#f87171", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"5px 14px", cursor:"pointer" }}>
+                      style={{ background:"transparent", border:"1px solid var(--danger-border)", borderRadius:6, color:"var(--danger)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"5px 14px", cursor:"pointer" }}>
                       Elimină
                     </button>
                   </div>
                 </div>
                 {resetId === entry.id && (
-                  <div style={{ display:"flex", flexDirection:"column", gap:8, borderTop:"1px solid #0e0a02", paddingTop:10 }}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:8, borderTop:"1px solid var(--border)", paddingTop:10 }}>
                     <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
                       <input type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} onKeyDown={e => e.key==="Enter" && submitReset(entry)} placeholder="Parolă nouă"
-                        style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} autoFocus />
+                        style={{ ...inp, flex:1, minWidth:140 }} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} autoFocus />
                       <button onClick={() => submitReset(entry)} disabled={resetLoading || !resetPassword.trim()}
-                        style={{ background:resetPassword.trim()?"#c9a030":"#1c1728", border:"none", borderRadius:6, color:resetPassword.trim()?"#0e0a18":"#444", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 20px", cursor:resetPassword.trim()?"pointer":"default", whiteSpace:"nowrap" }}>
+                        style={{ background:resetPassword.trim()?"var(--gold)":"var(--border)", border:"none", borderRadius:6, color:resetPassword.trim()?"var(--on-gold)":"var(--border-strong)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 20px", cursor:resetPassword.trim()?"pointer":"default", whiteSpace:"nowrap" }}>
                         {resetLoading ? "..." : "SALVEAZĂ"}
                       </button>
                     </div>
-                    {resetMsg && <div style={{ color:"#f87171", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{resetMsg}</div>}
+                    {resetMsg && <div style={{ color:"var(--danger)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{resetMsg}</div>}
                   </div>
                 )}
               </div>
@@ -2407,27 +2447,27 @@ function AdminPanelSection({ role, currentUser }) {
 
       {panelTab === "jurnale" && (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <div style={{ color:"#352808", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>
+          <div style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>
             ULTIMELE {logs.length} ACȚIUNI
           </div>
           {logLoading ? (
-            <div style={{ color:"#2a1f06", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"32px", textAlign:"center" }}>Se încarcă...</div>
+            <div style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"32px", textAlign:"center" }}>Se încarcă...</div>
           ) : logs.length === 0 ? (
-            <div style={{ background:"#0b0715", border:"1px dashed #1d1528", borderRadius:8, padding:"28px", textAlign:"center", color:"#251a06", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Nicio acțiune înregistrată.</div>
+            <div style={{ background:"var(--surface-1)", border:"1px dashed var(--border)", borderRadius:8, padding:"28px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Nicio acțiune înregistrată.</div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
               {logs.map(log => (
-                <div key={log.id} className="ev-list-row" style={{ background:"#0b0715", border:"1px solid #1c1728", borderRadius:7, padding:"10px 14px", display:"flex", gap:12, alignItems:"flex-start", flexWrap:"wrap" }}>
-                  <div style={{ flexShrink:0, minWidth:130, color:"#241a06", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>
+                <div key={log.id} className="ev-list-row" style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:7, padding:"10px 14px", display:"flex", gap:12, alignItems:"flex-start", flexWrap:"wrap" }}>
+                  <div style={{ flexShrink:0, minWidth:130, color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>
                     {new Date(log.created_at).toLocaleDateString("ro-RO")} {new Date(log.created_at).toLocaleTimeString("ro-RO", { hour:"2-digit", minute:"2-digit" })}
                   </div>
                   <div style={{ flexShrink:0, minWidth:160, display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontSize:8.5, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", padding:"1px 6px", borderRadius:4, textTransform:"uppercase", color: log.kind==="visit"?"#8a6c1e":"#60a5fa", background: log.kind==="visit"?"rgba(91,63,160,0.12)":"rgba(96,165,250,0.1)", border:`1px solid ${log.kind==="visit"?"#251a3d":"#1e2a3a"}` }}>{log.kind==="visit"?"Vizită":"Admin"}</span>
-                    <span style={{ color:"#5a4210", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>{log.actor_email}</span>
+                    <span style={{ fontSize:8.5, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", padding:"1px 6px", borderRadius:4, textTransform:"uppercase", color: log.kind==="visit"?"var(--gold-dim)":"var(--info)", background: log.kind==="visit"?"var(--surface-hover)":"var(--info-bg)", border:`1px solid ${log.kind==="visit"?"var(--border)":"var(--info-border)"}` }}>{log.kind==="visit"?"Vizită":"Admin"}</span>
+                    <span style={{ color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>{log.actor_email}</span>
                   </div>
                   <div style={{ flex:1, display:"flex", flexDirection:"column", gap:2, minWidth:180 }}>
-                    <span style={{ fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, color:"#e6def5" }}>{log.action}</span>
-                    {log.details && <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"#352808" }}>{log.details}</span>}
+                    <span style={{ fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:12, color:"var(--text)" }}>{log.action}</span>
+                    {log.details && <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:11, color:"var(--text-faint)" }}>{log.details}</span>}
                   </div>
                 </div>
               ))}
@@ -2438,20 +2478,20 @@ function AdminPanelSection({ role, currentUser }) {
 
       {panelTab === "setari" && (
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-          <div style={{ background:"#0b0715", border:"1px solid #0e0a02", borderRadius:10, padding:"18px 20px", display:"flex", flexDirection:"column", gap:14 }}>
-            <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, color:"#c9a030", letterSpacing:"0.08em" }}>NICKNAME AFIȘAT ÎN JURNALE</div>
-            <div style={{ color:"#352808", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>
+          <div style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:10, padding:"18px 20px", display:"flex", flexDirection:"column", gap:14 }}>
+            <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:14, color:"var(--gold)", letterSpacing:"0.08em" }}>NICKNAME AFIȘAT ÎN JURNALE</div>
+            <div style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>
               Setează nickname-ul care va apărea în jurnalele de acțiuni în locul email-ului.
             </div>
             <div style={{ display:"flex", gap:8 }}>
               <input value={gaNewNickname} onChange={e => setGaNewNickname(e.target.value)} onKeyDown={e => e.key==="Enter" && saveGaNickname()} placeholder="Nickname"
-                style={inp} onFocus={e => e.target.style.borderColor="#c9a030"} onBlur={e => e.target.style.borderColor="#1a1506"} />
+                style={inp} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border)"} />
               <button onClick={saveGaNickname} disabled={gaNickSaving || !gaNewNickname.trim()}
-                style={{ background:gaNewNickname.trim()?"#c9a030":"#1c1728", border:"none", borderRadius:6, color:gaNewNickname.trim()?"#0e0a18":"#444", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 20px", cursor:gaNewNickname.trim()?"pointer":"default", whiteSpace:"nowrap" }}>
+                style={{ background:gaNewNickname.trim()?"var(--gold)":"var(--border)", border:"none", borderRadius:6, color:gaNewNickname.trim()?"var(--on-gold)":"var(--border-strong)", fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:13, padding:"8px 20px", cursor:gaNewNickname.trim()?"pointer":"default", whiteSpace:"nowrap" }}>
                 {gaNickSaving ? "..." : "SALVEAZĂ"}
               </button>
             </div>
-            {gaNickMsg && <div style={{ color: gaNickMsg.startsWith("Eroare") ? "#f87171" : "#4ade80", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{gaNickMsg}</div>}
+            {gaNickMsg && <div style={{ color: gaNickMsg.startsWith("Eroare") ? "var(--danger)" : "var(--success)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{gaNickMsg}</div>}
           </div>
         </div>
       )}
@@ -2477,6 +2517,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [theme, toggleTheme] = useTheme();
 
   const isGeneralAdmin = userRole === "general_admin";
   const isAdmin2 = userRole === "admin2";
@@ -2620,17 +2661,17 @@ export default function App() {
   };
 
   if (loading) return (
-    <div style={{ minHeight:"100vh", background:"#050305", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:18 }}>
-      <img src={logoUrl} alt="Aldrick Enterprises" style={{ width:110, height:110, objectFit:"contain", opacity:0.9, filter:"drop-shadow(0 0 24px rgba(180,140,30,0.25))" }} />
+    <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:18 }}>
+      <img src={logoUrl} alt="Aldrick Enterprises" style={{ width:110, height:110, objectFit:"contain", opacity:0.9, filter:"drop-shadow(0 0 24px var(--gold-glow))" }} />
       <div className="ev-gold-text" style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:16, letterSpacing:"0.18em" }}>ALDRICK ENTERPRISES</div>
-      <div style={{ color:"#a07820", fontFamily:"'Rajdhani', sans-serif", fontSize:12, letterSpacing:"0.28em", opacity:0.6 }}>SE ÎNCARCĂ...</div>
+      <div style={{ color:"var(--gold-dim)", fontFamily:"'Rajdhani', sans-serif", fontSize:12, letterSpacing:"0.28em", opacity:0.6 }}>SE ÎNCARCĂ...</div>
     </div>
   );
 
   if (!userRole) return (
     <>
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={login} onLoginAccount={loginAccount} />}
-      <EntryGate onEnter={enterAsVisitor} onOpenLogin={() => setShowLogin(true)} />
+      <EntryGate onEnter={enterAsVisitor} onOpenLogin={() => setShowLogin(true)} theme={theme} onToggleTheme={toggleTheme} />
     </>
   );
 
@@ -2639,18 +2680,17 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800;900&family=Rajdhani:wght@500;600;700;800&family=Barlow:wght@400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #050305; }
+        body { background: var(--bg); color: var(--text); }
 
         /* ── Light vignette ── */
         .ev-vignette {
           position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-          background: radial-gradient(ellipse at 50% 50%,
-            transparent 62%, rgba(0,0,0,0.14) 82%, rgba(0,0,0,0.34) 100%);
+          background: var(--vignette);
         }
 
         /* ── Film grain (visible) ── */
         .ev-noise {
-          position: fixed; inset: 0; z-index: 9997; pointer-events: none; opacity: 0.055;
+          position: fixed; inset: 0; z-index: 9997; pointer-events: none; opacity: var(--noise-opacity);
           background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
           background-repeat: repeat; background-size: 180px 180px;
         }
@@ -2672,10 +2712,8 @@ export default function App() {
           100% { background-position: 200% center; }
         }
         .ev-brand-title, .ev-gold-text {
-          color: #c9a030;
-          background: linear-gradient(90deg,
-            #7a5210 0%, #c9a030 18%, #f0d878 42%, #fff8dc 50%, #f0d878 58%, #c9a030 82%, #7a5210 100%
-          );
+          color: var(--gold);
+          background: var(--shimmer);
           background-size: 240% auto;
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
@@ -2689,7 +2727,7 @@ export default function App() {
           width: 340px;
           max-width: 100%;
           padding: 38px 32px 32px;
-          background: rgba(6,4,1,0.84);
+          background: var(--frame-bg);
           border: 1px solid rgba(201,160,48,0.18);
         }
         .ev-entry-frame::before {
@@ -2709,7 +2747,7 @@ export default function App() {
           width: 340px;
           max-width: calc(100vw - 32px);
           padding: 28px 28px 24px;
-          background: rgba(6,4,1,0.92);
+          background: var(--frame-bg);
           border: 1px solid rgba(201,160,48,0.18);
           display: flex; flex-direction: column; gap: 14px;
         }
@@ -2726,7 +2764,7 @@ export default function App() {
 
         /* ── Nav bar ── */
         .ev-nav-glow {
-          box-shadow: 0 6px 50px rgba(0,0,0,0.9) !important;
+          box-shadow: var(--shadow-raised) !important;
           border-bottom: none !important;
           position: relative;
         }
@@ -2751,14 +2789,14 @@ export default function App() {
           transition: all 0.18s !important;
         }
         .ev-tab-active {
-          color: #f0d878 !important;
-          text-shadow: 0 0 18px rgba(212,168,48,0.6) !important;
+          color: var(--gold-soft) !important;
+          text-shadow: 0 0 18px var(--gold-glow) !important;
           background: linear-gradient(180deg, rgba(180,140,30,0.18) 0%, rgba(120,80,15,0.06) 100%) !important;
           border-top: 2px solid rgba(201,160,48,0.55) !important;
-          border-bottom: 2px solid #c9a030 !important;
+          border-bottom: 2px solid var(--gold) !important;
         }
         .ev-tab:not(.ev-tab-active):hover {
-          color: #aaa !important;
+          color: var(--text-muted) !important;
           background: rgba(160,110,20,0.07) !important;
         }
         .ev-nav-tabs::-webkit-scrollbar { display: none; }
@@ -2787,8 +2825,8 @@ export default function App() {
           text-transform: uppercase !important;
         }
         .ev-btn-gold:hover {
-          background: #c9a030 !important;
-          box-shadow: 0 0 18px rgba(212,168,48,0.35), -2px 0 10px rgba(212,168,48,0.2) !important;
+          background: var(--gold) !important;
+          box-shadow: 0 0 18px var(--gold-glow) !important;
         }
         .ev-add-dashed { border-radius: 2px !important; }
         .ev-cycle { border-radius: 3px !important; }
@@ -2796,7 +2834,7 @@ export default function App() {
 
         /* ── Nav right-side user badge ── */
         .ev-user-badge {
-          background: rgba(16,12,4,0.8);
+          background: var(--surface-3);
           border: 1px solid rgba(160,110,20,0.4);
           border-left: 2px solid rgba(201,160,48,0.7);
           border-radius: 2px;
@@ -2807,7 +2845,7 @@ export default function App() {
           background: transparent !important;
           border: 1px solid rgba(140,100,20,0.5) !important;
           border-radius: 2px !important;
-          color: #5a4210 !important;
+          color: var(--text-dim) !important;
           font-family: 'Barlow', sans-serif !important;
           font-size: 10px !important;
           letter-spacing: 0.08em !important;
@@ -2818,15 +2856,15 @@ export default function App() {
         }
         .ev-logout-btn:hover {
           border-color: rgba(201,160,48,0.7) !important;
-          color: #c04040 !important;
+          color: var(--danger) !important;
           background: rgba(160,110,20,0.1) !important;
         }
         .ev-login-btn {
-          background: rgba(14,10,3,0.9) !important;
+          background: var(--surface-3) !important;
           border: 1px solid rgba(160,110,20,0.5) !important;
           border-left: 2px solid rgba(201,160,48,0.8) !important;
           border-radius: 2px !important;
-          color: #6a5218 !important;
+          color: var(--text-dim) !important;
           font-family: 'Rajdhani', sans-serif !important;
           font-weight: 700 !important;
           font-size: 12px !important;
@@ -2838,33 +2876,33 @@ export default function App() {
         }
         .ev-login-btn:hover {
           border-color: rgba(201,160,48,0.9) !important;
-          border-left-color: #c9a030 !important;
-          color: #c9a030 !important;
+          border-left-color: var(--gold) !important;
+          color: var(--gold) !important;
           background: rgba(160,110,20,0.15) !important;
           box-shadow: 0 0 16px rgba(201,160,48,0.2) !important;
         }
 
         /* ── Scrollbar — blood red ── */
         ::-webkit-scrollbar { width: 5px; height: 5px; }
-        ::-webkit-scrollbar-track { background: #050305; }
-        ::-webkit-scrollbar-thumb { background: rgba(180,140,30,0.35); border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--gold-glow); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(201,160,48,0.55); }
 
         /* ── Footer ── */
         .ev-footer {
           text-align: center; padding: 10px 16px;
           font-family: 'Barlow', sans-serif; font-size: 11px;
-          letter-spacing: 0.08em; color: #5a4210;
-          border-top: 1px solid rgba(201,160,48,0.15);
-          background: rgba(0,0,0,0.65); flex-shrink: 0; user-select: none;
+          letter-spacing: 0.08em; color: var(--text-dim);
+          border-top: 1px solid var(--border-gold);
+          background: var(--footer-bg); flex-shrink: 0; user-select: none;
           position: relative; z-index: 1;
         }
-        .ev-footer span { color: #4a3210; }
-        .ev-footer .ev-footer-dot { color: #c9a030; opacity: 0.55; margin: 0 5px; }
-        .ev-footer .ev-footer-gold { color: #8a6218; letter-spacing: 0.06em; }
+        .ev-footer span { color: var(--text-dim); }
+        .ev-footer .ev-footer-dot { color: var(--gold); opacity: 0.55; margin: 0 5px; }
+        .ev-footer .ev-footer-gold { color: var(--gold-dim); letter-spacing: 0.06em; }
 
         /* ── Selection ── */
-        ::selection { background: rgba(180,140,30,0.3); color: #f0d878; }
+        ::selection { background: var(--gold-glow); color: var(--text); }
 
         /* ── Buttons ── */
         button { transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s, opacity 0.15s; }
@@ -2873,41 +2911,41 @@ export default function App() {
         /* ── Inputs ── */
         input:not([type=range]):not([type=file]), textarea, select { transition: border-color 0.18s, box-shadow 0.18s; }
         input:not([type=range]):not([type=file]):focus, textarea:focus {
-          box-shadow: 0 0 0 2px rgba(180,140,30,0.2) !important;
+          box-shadow: 0 0 0 2px var(--gold-glow) !important;
           outline: none !important;
         }
-        select:focus { outline: none !important; border-color: #c9a030 !important; box-shadow: 0 0 0 2px rgba(91,63,160,0.15); }
-        select option { background: #100d06; color: #e6def5; }
+        select:focus { outline: none !important; border-color: var(--gold) !important; box-shadow: 0 0 0 2px var(--gold-glow); }
+        select option { background: var(--surface-3); color: var(--text); }
 
         /* ── Range slider ── */
         input[type=range] { -webkit-appearance: none; background: transparent; width: 100%; }
-        input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #8a1010 0%, #222 100%); }
-        input[type=range]:disabled::-webkit-slider-runnable-track { background: #1e1e1e; }
+        input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--gold) 0%, var(--border) 100%); }
+        input[type=range]:disabled::-webkit-slider-runnable-track { background: var(--disabled); }
         input[type=range]::-webkit-slider-thumb {
           -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-          background: #c9a030; border: 2px solid #050305; margin-top: -6px;
-          cursor: pointer; box-shadow: 0 0 8px rgba(212,168,48,0.45);
+          background: var(--gold); border: 2px solid var(--bg); margin-top: -6px;
+          cursor: pointer; box-shadow: 0 0 8px var(--gold-glow);
           transition: transform 0.12s, box-shadow 0.12s;
         }
-        input[type=range]:not(:disabled)::-webkit-slider-thumb:hover { transform: scale(1.22); box-shadow: 0 0 14px rgba(212,168,48,0.6); }
-        input[type=range]:disabled::-webkit-slider-thumb { background: #2a2a2a; box-shadow: none; cursor: default; }
+        input[type=range]:not(:disabled)::-webkit-slider-thumb:hover { transform: scale(1.22); box-shadow: 0 0 14px var(--gold-glow); }
+        input[type=range]:disabled::-webkit-slider-thumb { background: var(--disabled); box-shadow: none; cursor: default; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
 
         /* ── Member cards ── */
         .ev-member-card { transition: border-color 0.2s, box-shadow 0.22s !important; }
-        .ev-member-card:hover { border-color: #251a06 !important; box-shadow: 0 4px 24px rgba(0,0,0,0.7), 0 0 0 1px rgba(180,140,30,0.12), 0 0 20px rgba(160,110,20,0.08) !important; }
+        .ev-member-card:hover { border-color: var(--border-strong) !important; box-shadow: var(--shadow-raised), 0 0 0 1px var(--border-gold) !important; }
 
         /* ── Grid cards ── */
         .ev-grid-card { transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s !important; }
-        .ev-grid-card:hover { transform: translateY(-3px) !important; box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(180,140,30,0.15) !important; border-color: #251a06 !important; }
+        .ev-grid-card:hover { transform: translateY(-3px) !important; box-shadow: var(--shadow-raised), 0 0 0 1px var(--border-gold) !important; border-color: var(--border-strong) !important; }
 
         /* ── Approval cards ── */
         .ev-approval-card { transition: transform 0.15s, box-shadow 0.18s, border-color 0.15s !important; }
-        .ev-approval-card:hover { transform: translateY(-2px) !important; box-shadow: 0 6px 28px rgba(0,0,0,0.65) !important; border-color: #241a06 !important; }
+        .ev-approval-card:hover { transform: translateY(-2px) !important; box-shadow: var(--shadow-raised) !important; border-color: var(--border-strong) !important; }
 
         /* ── Puncte rows ── */
         .ev-p-row { transition: background 0.12s, border-color 0.12s !important; }
-        .ev-p-row:hover { background: #100c1e !important; border-color: #1c1728 !important; }
+        .ev-p-row:hover { background: var(--surface-hover) !important; border-color: var(--border) !important; }
         .ev-reg-row { transition: background 0.12s !important; }
         .ev-reg-row:hover { background: rgba(170,130,28,0.06) !important; }
 
@@ -2917,9 +2955,9 @@ export default function App() {
         .ev-chip { transition: transform 0.12s, filter 0.12s !important; }
         .ev-chip:hover { transform: scale(1.04) !important; filter: brightness(1.1) !important; }
         .ev-add-dashed { transition: border-color 0.15s, color 0.15s, background 0.15s !important; }
-        .ev-add-dashed:hover { border-color: #c9a030 !important; color: #c9a030 !important; background: rgba(201,160,48,0.04) !important; }
+        .ev-add-dashed:hover { border-color: var(--gold) !important; color: var(--gold) !important; background: rgba(201,160,48,0.04) !important; }
         .ev-btn-gold { transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important; }
-        .ev-btn-gold:hover { background: #d4aa38 !important; box-shadow: 0 2px 14px rgba(201,160,48,0.3) !important; }
+        .ev-btn-gold:hover { filter: brightness(1.08); box-shadow: 0 2px 14px var(--gold-glow) !important; }
         .ev-list-row { transition: background 0.1s !important; }
         .ev-list-row:hover { background: rgba(170,130,28,0.05) !important; }
       `}</style>
@@ -2930,18 +2968,18 @@ export default function App() {
 
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={login} onLoginAccount={loginAccount} />}
 
-      <div style={{ minHeight:"100vh", background:"transparent", color:"#e6def5", fontFamily:"'Barlow', sans-serif", display:"flex", flexDirection:"column", position:"relative", zIndex:1 }}>
+      <div style={{ minHeight:"100vh", background:"transparent", color:"var(--text)", fontFamily:"'Barlow', sans-serif", display:"flex", flexDirection:"column", position:"relative", zIndex:1 }}>
         {/* Top accent bar */}
         <div className="ev-top-accent" />
         {/* Top nav */}
-        <div className="ev-nav-glow" style={{ background:"linear-gradient(180deg, rgba(8,6,2,0.98) 0%, rgba(6,4,1,0.97) 100%)", backdropFilter:"blur(20px)", padding:"0 0 0 16px", display:"flex", alignItems:"stretch", height:62, gap:0, flexShrink:0, minWidth:0, position:"sticky", top:0, zIndex:100 }}>
+        <div className="ev-nav-glow" style={{ background:"var(--nav-bg)", backdropFilter:"blur(20px)", padding:"0 0 0 16px", display:"flex", alignItems:"stretch", height:62, gap:0, flexShrink:0, minWidth:0, position:"sticky", top:0, zIndex:100 }}>
 
           {/* Brand block */}
           <div className="ev-brand-block" style={{ alignItems:"center", gap:10 }}>
             <img src={logoUrl} alt="Aldrick" style={{ width:38, height:38, objectFit:"contain", flexShrink:0 }} />
             <div>
               <span className="ev-brand-title" style={{ fontFamily:"'Cinzel', serif", fontWeight:800, fontSize:15, letterSpacing:"0.14em", display:"block", lineHeight:1.1 }}>ALDRICK</span>
-              <span style={{ fontFamily:"'Cinzel', serif", fontWeight:600, fontSize:9, letterSpacing:"0.28em", color:"#7a5a18", display:"block", lineHeight:1.2 }}>ENTERPRISES</span>
+              <span className="ev-brand-sub" style={{ fontFamily:"'Cinzel', serif", fontWeight:600, fontSize:9, letterSpacing:"0.28em", color:"var(--gold-dim)", display:"block", lineHeight:1.2 }}>ENTERPRISES</span>
             </div>
           </div>
 
@@ -2949,25 +2987,26 @@ export default function App() {
           <div className="ev-nav-tabs" style={{ display:"flex", height:"100%", gap:0, flex:1, overflowX:"auto", scrollbarWidth:"none" }}>
             {navTabs.map(t => (
               <button key={t} onClick={() => switchTab(t)} className={`ev-tab${tab===t?" ev-tab-active":""}`}
-                style={{ background:"transparent", border:"none", color:tab===t?"#e6def5":"#5a4210", fontFamily:"'Barlow', sans-serif", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, height:"100%" }}>
+                style={{ background:"transparent", border:"none", color:tab===t?"var(--text)":"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap", flexShrink:0, height:"100%" }}>
                 {t.toUpperCase()}
               </button>
             ))}
           </div>
 
           {/* User / Login */}
-          <div style={{ flexShrink:0, display:"flex", alignItems:"center", gap:8, paddingRight:16 }}>
+          <div className="ev-nav-right" style={{ flexShrink:0, display:"flex", alignItems:"center", gap:8, paddingRight:16 }}>
             <div className="ev-user-badge">
-              <span style={{ fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", color: isGeneralAdmin ? "#c9a030" : isAdmin2 ? "#60a5fa" : userRole === "member" ? "#a3e635" : "#8a6c1e", textTransform:"uppercase" }}>
+              <span style={{ fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.1em", color: isGeneralAdmin ? "var(--gold)" : isAdmin2 ? "var(--info)" : userRole === "member" ? "var(--success)" : "var(--gold-dim)", textTransform:"uppercase" }}>
                 {isGeneralAdmin ? "⬡ General Admin" : isAdmin2 ? "⬡ Admin 2" : userRole === "member" ? "⬡ Membru" : "◇ Vizitator"}
               </span>
-              <span style={{ fontSize:9.5, fontFamily:"'Barlow', sans-serif", color:"rgba(150,140,180,0.6)", letterSpacing:"0.04em" }}>
+              <span style={{ fontSize:9.5, fontFamily:"'Barlow', sans-serif", color:"var(--text-dim)", letterSpacing:"0.04em" }}>
                 {currentUser?.nickname || currentUser?.email || ""}
               </span>
             </div>
             {isVisitor && (
               <button className="ev-login-btn" onClick={() => setShowLogin(true)}>⬡ Acces cont</button>
             )}
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <button className="ev-logout-btn" onClick={logout}>Ieșire</button>
           </div>
         </div>
@@ -2995,7 +3034,7 @@ export default function App() {
             <span className="ev-footer-dot">·</span>
             <span>Toate drepturile rezervate</span>
             <span className="ev-footer-dot">·</span>
-            <span style={{ color:"#7a5a18" }}>sebastian.0115</span>
+            <span style={{ color:"var(--gold-dim)" }}>sebastian.0115</span>
           </div>
         </div>
       </div>

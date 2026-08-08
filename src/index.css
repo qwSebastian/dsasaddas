@@ -1,4 +1,232 @@
+/* ════════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   Every colour in the app resolves through these. `:root` is the dark
+   theme (the default); `[data-theme="light"]` overrides the same names
+   with light values, so the whole UI flips without any JS beyond
+   setting the attribute on <html>.
+   The palette is unchanged in character — gold accent, violet-tinted
+   neutrals — just lifted a few steps so surfaces read as slate rather
+   than pure black.
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  color-scheme: dark;
+
+  /* Surfaces — lowest to highest */
+  --bg:            #0c0913;
+  --bg-deep:       #08060e;
+  --surface-1:     #141020;   /* nav, footer, section panels */
+  --surface-2:     #191325;   /* cards */
+  --surface-3:     #120e1d;   /* inputs, wells, badges */
+  --surface-hover: #1f1830;
+
+  /* Borders */
+  --border:        #2a2138;
+  --border-strong: #3b2f4e;
+  --border-gold:   rgba(217, 180, 74, 0.34);
+
+  /* Text */
+  --text:          #ece7f8;
+  --text-muted:    #b0a6c8;
+  --text-dim:      #837a9c;
+  --text-faint:    #5b5375;
+
+  /* Gold accent */
+  --gold:          #d9b44a;
+  --gold-soft:     #f2dd94;
+  --gold-dim:      #9c8340;
+  --gold-glow:     rgba(217, 180, 74, 0.30);
+  --on-gold:       #16110a;   /* text sitting on a gold fill */
+
+  /* Semantic */
+  --danger:        #f87171;
+  --danger-border: #5c2b3d;
+  --danger-bg:     #241320;
+  --success:       #4ade80;
+  --success-soft:  #86efac;
+  --success-border:#245239;
+  --success-bg:    #10251b;
+  --info:          #60a5fa;
+  --info-border:   #26436e;
+  --info-bg:       #101c2e;
+  --warn:          #fb923c;
+  --warn-border:   #6b3d18;
+  --disabled:      #35304a;
+
+  /* Executive highlight + the violet "card background" accent */
+  --exec-bg:       linear-gradient(180deg, #241c0c 0%, #171105 100%);
+  --exec-border:   #a58538;
+  --violet:        #7c3aed;
+  --violet-soft:   #a78bfa;
+  --card-bg-veil:  rgba(5, 3, 20, 0.72);
+  --frame-bg:      rgba(18, 14, 28, 0.90);
+  --shimmer:       linear-gradient(90deg, #7a5210 0%, #c9a030 18%, #f0d878 42%, #fff8dc 50%, #f0d878 58%, #c9a030 82%, #7a5210 100%);
+
+  /* Effects */
+  --shadow-card:   0 2px 10px rgba(0, 0, 0, 0.45);
+  --shadow-raised: 0 8px 34px rgba(0, 0, 0, 0.55);
+  --overlay:       rgba(4, 3, 8, 0.86);
+  --nav-bg:        linear-gradient(180deg, rgba(20, 16, 32, 0.97) 0%, rgba(14, 11, 23, 0.97) 100%);
+  --footer-bg:     rgba(10, 8, 16, 0.72);
+  --noise-opacity: 0.05;
+  --vignette:      radial-gradient(ellipse at 50% 50%, transparent 62%, rgba(0,0,0,0.14) 82%, rgba(0,0,0,0.34) 100%);
+
+  /* Rank ladders — Aldrick Family (1 lowest → 9 highest)
+     bg / bd border / tx text / sh card shadow / gl name glow */
+  --rank-a1-bg: #16121c;  --rank-a1-bd: #2a2236;  --rank-a1-tx: #7b7194;
+  --rank-a2-bg: #191320;  --rank-a2-bd: #37291f;  --rank-a2-tx: #9a8464;
+  --rank-a3-bg: #1b1520;  --rank-a3-bd: #46311c;  --rank-a3-tx: #b09168;
+  --rank-a4-bg: #1e1720;  --rank-a4-bd: #6a481a;  --rank-a4-tx: #c79a4a;
+  --rank-a5-bg: #211712;  --rank-a5-bd: #8f3d1e;  --rank-a5-tx: #dd8250;
+  --rank-a6-bg: #23180e;  --rank-a6-bd: #a86a1c;  --rank-a6-tx: #e39a35;
+  --rank-a7-bg: linear-gradient(135deg, #221909 0%, #2f2210 100%);
+  --rank-a7-bd: #cd9526;  --rank-a7-tx: #edba48;
+  --rank-a8-bg: linear-gradient(135deg, #2a1f0a 0%, #3d2c10 50%, #2a1f0a 100%);
+  --rank-a8-bd: #dcb033;  --rank-a8-tx: #f6d258;
+  --rank-a9-bg: linear-gradient(135deg, #2f2209 0%, #4b3410 30%, #2f2209 70%, #1f1707 100%);
+  --rank-a9-bd: #f7cf45;  --rank-a9-tx: #ffe75c;
+
+  --rank-a1-sh: none;
+  --rank-a2-sh: none;
+  --rank-a3-sh: none;
+  --rank-a4-sh: 0 0 8px rgba(120, 80, 20, 0.22);
+  --rank-a5-sh: 0 0 10px rgba(180, 60, 20, 0.28);
+  --rank-a6-sh: 0 0 13px rgba(180, 110, 20, 0.35);
+  --rank-a7-sh: 0 0 18px rgba(210, 140, 24, 0.45), 0 0 36px rgba(210, 140, 24, 0.15);
+  --rank-a8-sh: 0 0 24px rgba(225, 165, 32, 0.55), 0 0 48px rgba(225, 165, 32, 0.22);
+  --rank-a9-sh: 0 0 38px rgba(255, 195, 30, 0.65), 0 0 75px rgba(255, 195, 30, 0.28);
+
+  --rank-a1-gl: none;
+  --rank-a2-gl: none;
+  --rank-a3-gl: none;
+  --rank-a4-gl: 0 0 6px rgba(199, 154, 74, 0.45);
+  --rank-a5-gl: 0 0 7px rgba(221, 130, 80, 0.45);
+  --rank-a6-gl: 0 0 8px rgba(227, 154, 53, 0.50);
+  --rank-a7-gl: 0 0 10px rgba(237, 186, 72, 0.55);
+  --rank-a8-gl: 0 0 13px rgba(246, 210, 88, 0.65);
+  --rank-a9-gl: 0 0 18px rgba(255, 231, 92, 0.85), 0 0 36px rgba(255, 200, 0, 0.45);
+
+  /* Rank ladders — Sicarios (1 lowest → 5 highest) */
+  --rank-s1-bg: #14111e;  --rank-s1-bd: #2b2140;  --rank-s1-tx: #6b6090;
+  --rank-s2-bg: #171326;  --rank-s2-bd: #3d2456;  --rank-s2-tx: #8974a6;
+  --rank-s3-bg: #191428;  --rank-s3-bd: #563473;  --rank-s3-tx: #a480b0;
+  --rank-s4-bg: linear-gradient(135deg, #1a1230 0%, #24163c 100%);
+  --rank-s4-bd: #8060b8;  --rank-s4-tx: #bb8ee0;
+  --rank-s5-bg: linear-gradient(135deg, #1d1236 0%, #2c1650 50%, #1d1236 100%);
+  --rank-s5-bd: #a875e4;  --rank-s5-tx: #d5a2ff;
+
+  --rank-s1-sh: none;
+  --rank-s2-sh: none;
+  --rank-s3-sh: 0 0 6px rgba(90, 50, 130, 0.22);
+  --rank-s4-sh: 0 0 14px rgba(120, 80, 185, 0.38), 0 0 28px rgba(120, 80, 185, 0.14);
+  --rank-s5-sh: 0 0 22px rgba(155, 88, 235, 0.48), 0 0 44px rgba(155, 88, 235, 0.20);
+
+  --rank-s1-gl: none;
+  --rank-s2-gl: none;
+  --rank-s3-gl: 0 0 5px rgba(164, 128, 176, 0.40);
+  --rank-s4-gl: 0 0 9px rgba(187, 142, 224, 0.50);
+  --rank-s5-gl: 0 0 13px rgba(213, 162, 255, 0.65);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:            #f5f1e8;
+  --bg-deep:       #ebe5d7;
+  --surface-1:     #fffdf8;
+  --surface-2:     #ffffff;
+  --surface-3:     #f2ede1;
+  --surface-hover: #f7f2e6;
+
+  --border:        #e0d8c6;
+  --border-strong: #c8bda4;
+  --border-gold:   rgba(150, 116, 22, 0.34);
+
+  --text:          #241d16;
+  --text-muted:    #5d5344;
+  --text-dim:      #837765;
+  --text-faint:    #a89b85;
+
+  --gold:          #9a7716;
+  --gold-soft:     #7d5f0f;
+  --gold-dim:      #b09b64;
+  --gold-glow:     rgba(154, 119, 22, 0.22);
+  --on-gold:       #fffaec;
+
+  --danger:        #c02626;
+  --danger-border: #e8b4b4;
+  --danger-bg:     #fbeaea;
+  --success:       #157f3c;
+  --success-soft:  #10682f;
+  --success-border:#b6ddc2;
+  --success-bg:    #ecf7ef;
+  --info:          #1d63b8;
+  --info-border:   #b9d0ec;
+  --info-bg:       #ecf3fb;
+  --warn:          #b45a09;
+  --warn-border:   #eccba6;
+  --disabled:      #d3cab6;
+
+  --exec-bg:       linear-gradient(180deg, #fff6db 0%, #fdefc4 100%);
+  --exec-border:   #c39c33;
+  --violet:        #6d28d9;
+  --violet-soft:   #5b21b6;
+  --card-bg-veil:  rgba(255, 253, 247, 0.84);
+  --frame-bg:      rgba(255, 253, 248, 0.95);
+  --shimmer:       linear-gradient(90deg, #6f540c 0%, #9a7716 18%, #c2952a 42%, #dbb14a 50%, #c2952a 58%, #9a7716 82%, #6f540c 100%);
+
+  --shadow-card:   0 1px 3px rgba(60, 48, 24, 0.10);
+  --shadow-raised: 0 10px 34px rgba(60, 48, 24, 0.14);
+  --overlay:       rgba(40, 33, 20, 0.42);
+  --nav-bg:        linear-gradient(180deg, rgba(255, 253, 248, 0.97) 0%, rgba(248, 244, 234, 0.97) 100%);
+  --footer-bg:     rgba(255, 253, 248, 0.8);
+  --noise-opacity: 0;
+  --vignette:      none;
+
+  --rank-a1-bg: #ffffff;  --rank-a1-bd: #e2dac8;  --rank-a1-tx: #7d7360;
+  --rank-a2-bg: #fffdf7;  --rank-a2-bd: #ded0b0;  --rank-a2-tx: #8a7549;
+  --rank-a3-bg: #fffcf3;  --rank-a3-bd: #d9c496;  --rank-a3-tx: #96773c;
+  --rank-a4-bg: #fffbee;  --rank-a4-bd: #d0ae64;  --rank-a4-tx: #96702a;
+  --rank-a5-bg: #fff8ee;  --rank-a5-bd: #d99a67;  --rank-a5-tx: #a4531d;
+  --rank-a6-bg: #fff7e6;  --rank-a6-bd: #d5a23c;  --rank-a6-tx: #97650d;
+  --rank-a7-bg: linear-gradient(135deg, #fff8e2 0%, #fdf1cf 100%);
+  --rank-a7-bd: #c99a1e;  --rank-a7-tx: #8a6503;
+  --rank-a8-bg: linear-gradient(135deg, #fff6d6 0%, #fdeeba 50%, #fff6d6 100%);
+  --rank-a8-bd: #c0900e;  --rank-a8-tx: #7d5c00;
+  --rank-a9-bg: linear-gradient(135deg, #fff4c8 0%, #fce9a6 30%, #fff4c8 70%, #fffae2 100%);
+  --rank-a9-bd: #b8860a;  --rank-a9-tx: #6f5000;
+
+  --rank-s1-bg: #ffffff;  --rank-s1-bd: #ded9e8;  --rank-s1-tx: #746b8a;
+  --rank-s2-bg: #fdfcff;  --rank-s2-bd: #d3c8e6;  --rank-s2-tx: #6b5a8c;
+  --rank-s3-bg: #fbf9ff;  --rank-s3-bd: #c0addd;  --rank-s3-tx: #6a4b93;
+  --rank-s4-bg: linear-gradient(135deg, #f9f5ff 0%, #f2e9ff 100%);
+  --rank-s4-bd: #a582d6;  --rank-s4-tx: #5c3399;
+  --rank-s5-bg: linear-gradient(135deg, #f6efff 0%, #ece0ff 50%, #f6efff 100%);
+  --rank-s5-bd: #8b53d8;  --rank-s5-tx: #4d1f91;
+
+  /* Glows read as smudges on light surfaces — flatten to soft shadows. */
+  --rank-a1-sh: none; --rank-a2-sh: none; --rank-a3-sh: none;
+  --rank-a4-sh: 0 1px 4px rgba(150, 112, 42, 0.14);
+  --rank-a5-sh: 0 1px 5px rgba(164, 83, 29, 0.16);
+  --rank-a6-sh: 0 1px 6px rgba(151, 101, 13, 0.18);
+  --rank-a7-sh: 0 2px 10px rgba(138, 101, 3, 0.18);
+  --rank-a8-sh: 0 2px 12px rgba(125, 92, 0, 0.20);
+  --rank-a9-sh: 0 2px 14px rgba(111, 80, 0, 0.24);
+  --rank-s1-sh: none; --rank-s2-sh: none;
+  --rank-s3-sh: 0 1px 5px rgba(106, 75, 147, 0.14);
+  --rank-s4-sh: 0 2px 10px rgba(92, 51, 153, 0.18);
+  --rank-s5-sh: 0 2px 14px rgba(77, 31, 145, 0.22);
+
+  --rank-a1-gl: none; --rank-a2-gl: none; --rank-a3-gl: none;
+  --rank-a4-gl: none; --rank-a5-gl: none; --rank-a6-gl: none;
+  --rank-a7-gl: none; --rank-a8-gl: none; --rank-a9-gl: none;
+  --rank-s1-gl: none; --rank-s2-gl: none; --rank-s3-gl: none;
+  --rank-s4-gl: none; --rank-s5-gl: none;
+}
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { background: var(--bg); }
+body { color: var(--text); }
 
 @keyframes evShimmer {
   0% { background-position: 200% 0; }
@@ -7,8 +235,8 @@
 
 /* ── List tab bar ───────────────────────────────────────────────── */
 .list-tab-btn:hover {
-  color: #c9a030 !important;
-  background: #0e0b02 !important;
+  color: var(--gold) !important;
+  background: var(--surface-hover) !important;
 }
 
 /* ── Aldrick Family rank animations ─────────────────────────────── */
@@ -42,3 +270,99 @@
   50%      { box-shadow: 0 0 21px rgba(128,86,195,0.54), 0 0 42px rgba(120,80,185,0.22); }
 }
 [data-rank="sic-consigliere"] { animation: sic-consigliere-pulse 3.4s ease-in-out infinite; }
+
+/* The rank glow animations are tuned for dark surfaces; on light they
+   turn cards into smudges, so drop them to a clean static edge. */
+[data-theme="light"] [data-rank] { animation: none !important; }
+[data-theme="light"] [data-rank="aldrick-don"]       { box-shadow: 0 2px 14px rgba(184, 134, 10, 0.28) !important; }
+[data-theme="light"] [data-rank="aldrick-underboss"] { box-shadow: 0 2px 12px rgba(192, 144, 14, 0.22) !important; }
+[data-theme="light"] [data-rank="aldrick-hc"]        { box-shadow: 0 2px 10px rgba(201, 154, 30, 0.18) !important; }
+[data-theme="light"] [data-rank="sic-kingpin"]       { box-shadow: 0 2px 14px rgba(139, 83, 216, 0.24) !important; }
+[data-theme="light"] [data-rank="sic-consigliere"]   { box-shadow: 0 2px 12px rgba(165, 130, 214, 0.20) !important; }
+
+/* ════════════════════════════════════════════════════════════════
+   THEME TOGGLE
+   ════════════════════════════════════════════════════════════════ */
+.ev-theme-toggle {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  color: var(--gold);
+  font-size: 13px;
+  line-height: 1;
+  padding: 6px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.ev-theme-toggle:hover {
+  border-color: var(--gold);
+  background: var(--surface-hover);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   Inline styles win over stylesheets, so the mobile overrides that
+   have to beat one carry !important. Layout is unchanged above
+   900px — this only reflows what would otherwise overflow.
+   ════════════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .ev-pad    { padding: 16px 14px !important; }
+  .ev-tabbar { padding: 0 14px !important; }
+}
+
+@media (max-width: 640px) {
+  .ev-pad    { padding: 14px 11px !important; }
+  .ev-tabbar { padding: 0 11px !important; gap: 2px !important; }
+
+  /* Nav: brand shrinks, tabs scroll, the user block stays on one line. */
+  .ev-nav-glow      { height: 54px !important; padding-left: 10px !important; }
+  .ev-brand-block   { padding-right: 10px !important; margin-right: 4px !important; gap: 7px !important; }
+  .ev-brand-block img { width: 28px !important; height: 28px !important; }
+  .ev-brand-sub     { display: none !important; }
+  .ev-brand-title   { font-size: 12px !important; letter-spacing: 0.10em !important; }
+  .ev-tab           { padding: 0 11px !important; font-size: 10.5px !important; }
+  .ev-nav-right     { gap: 5px !important; padding-right: 9px !important; }
+  /* Fade the scrolling tab strip at its right edge so a half-scrolled
+     label trails off instead of butting into the buttons beside it. */
+  .ev-nav-tabs      { min-width: 0 !important;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent 100%);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 20px), transparent 100%); }
+  .ev-user-badge    { padding: 3px 7px !important; max-width: 116px !important; }
+  .ev-user-badge span { font-size: 9px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .ev-logout-btn, .ev-login-btn { padding: 4px 7px !important; font-size: 9px !important; letter-spacing: 0.04em !important; }
+  .ev-theme-toggle  { padding: 5px 7px !important; }
+
+  /* Search takes a full row; the add button sits under it. */
+  .ev-toolbar { flex-wrap: wrap !important; width: 100% !important; margin-left: 0 !important; }
+  .ev-search { width: 100% !important; min-width: 0 !important; }
+  .ev-search-wrap { flex: 1 1 100% !important; min-width: 0 !important; }
+
+  /* One column for the member edit form. */
+  .ev-form-grid { grid-template-columns: 1fr !important; }
+
+  /* Card header: avatar + name stay on one line, controls wrap under. */
+  .ev-card-head { gap: 10px !important; padding: 10px 12px !important; flex-wrap: wrap !important; }
+
+  /* Photo + fields stack instead of sitting side by side. */
+  .ev-card-body { flex-direction: column !important; align-items: stretch !important; }
+
+  /* Modals and the entry card fit the viewport. */
+  .ev-entry-frame, .ev-modal-frame { width: 100% !important; max-width: calc(100vw - 24px) !important; padding: 26px 18px 22px !important; }
+  .ev-entry-frame::before, .ev-modal-frame::before { inset: -22px !important; }
+
+  /* Section headings scale down a step. */
+  .ev-section-title { font-size: 17px !important; }
+}
+
+/* Below ~480px the nav has no room for the identity badge; the role is
+   still visible on the Panel screen, so drop it rather than squeeze the
+   tab strip into an unreadable sliver. */
+@media (max-width: 480px) {
+  .ev-user-badge { display: none !important; }
+}
+
+/* Coarse pointers need a real tap target. */
+@media (pointer: coarse) {
+  button, .ev-cycle, .ev-license, .ev-chip { min-height: 32px; }
+}
