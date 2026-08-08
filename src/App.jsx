@@ -52,6 +52,10 @@ const SALA_SPORT_KEY = "sala_sport";
 const LEGACY_SALA_SPORT_KEY = "frizerie";
 const normalizeSystemKey = key => (key === LEGACY_SALA_SPORT_KEY ? SALA_SPORT_KEY : key);
 
+// Default profile picture for Sala Sport members. Used whenever a member has no
+// photo of their own; an uploaded photo always wins.
+const SALA_SPORT_AVATAR = "/sala-sport-avatar.jpg";
+
 const ALDRICK_RANK_STYLES = [
   { bg:"#0a0804", border:"#1e120a", shadow:"none", nameColor:"#4a3828" },
   { bg:"#0c0a06", border:"#2a1c0a", shadow:"none", nameColor:"#685030" },
@@ -265,7 +269,9 @@ function EntryGate({ onEnter, onOpenLogin }) {
 }
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
-function PhotoUpload({ photo, onChange, disabled, size = 90 }) {
+// `fallback` is shown when the member has no photo of their own (Sala Sport
+// members default to the gym avatar). Clicking still opens the file picker.
+function PhotoUpload({ photo, onChange, disabled, size = 90, fallback = null }) {
   const fileRef = useRef();
   const handleFile = e => {
     const file = e.target.files[0]; if (!file) return;
@@ -273,9 +279,10 @@ function PhotoUpload({ photo, onChange, disabled, size = 90 }) {
     reader.onload = ev => onChange(ev.target.result);
     reader.readAsDataURL(file);
   };
+  const shown = photo || fallback;
   return (
-    <div onClick={() => { if (!disabled) fileRef.current.click(); }} style={{ width:size, height:size*1.22, borderRadius:8, border:photo?"2px solid #c9a030":"2px dashed #444", background:photo?"transparent":"#100d06", cursor:disabled?"default":"pointer", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-      {photo ? <img src={photo} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+    <div onClick={() => { if (!disabled) fileRef.current.click(); }} style={{ width:size, height:size*1.22, borderRadius:8, border:photo?"2px solid #c9a030":shown?"2px solid #4a3810":"2px dashed #444", background:shown?"transparent":"#100d06", cursor:disabled?"default":"pointer", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+      {shown ? <img src={shown} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
         : <div style={{ textAlign:"center", color:"#352808" }}><div style={{ fontSize:22, marginBottom:4 }}>📷</div>{!disabled && <div style={{ fontSize:10, fontFamily:"'Barlow', sans-serif" }}>Foto</div>}</div>}
       {!disabled && <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />}
     </div>
@@ -437,6 +444,8 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
   const [expanded, setExpanded] = useState(false);
   const isExecutive = isSalaSport && !!member.executive;
   const rs = isSalaSport ? { bg:"#0f0a1c", border:"#1a1426", shadow:"none", nameColor:"#e6def5" } : getRankStyle(rankSystem, member.rank, ranks);
+  // Sala Sport members fall back to the gym avatar; an uploaded photo wins.
+  const avatarSrc = member.photo || (isSalaSport ? SALA_SPORT_AVATAR : null);
   const [activityLog, setActivityLog] = useState(Array.isArray(member.task_log) ? member.task_log : []);
   const [addTask, setAddTask] = useState("");
   const [subTask, setSubTask] = useState("");
@@ -505,7 +514,7 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
     <div className="ev-member-card" data-rank={(!isSalaSport && rs.rankKey) ? rs.rankKey : undefined} style={{ background: member.card_bg ? `linear-gradient(rgba(5,3,20,0.72),rgba(5,3,20,0.72)),url(/cardbg.png) center/cover no-repeat` : isExecutive ? "linear-gradient(180deg, #1a1506 0%, #0e0a04 100%)" : rs.bg, border: member.card_bg ? "1px solid rgba(124,58,237,0.35)" : isExecutive ? "1px solid #a07820" : `1px solid ${rs.border}`, borderRadius:10, overflow:"hidden", boxShadow: member.card_bg ? "0 0 18px rgba(124,58,237,0.18)" : isExecutive ? "0 0 22px rgba(180,140,30,0.18)" : rs.shadow }}>
       <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", userSelect:"none" }}>
         <div style={{ width:42, height:42, borderRadius:6, border: isExecutive ? "1px solid #a07820" : "1px solid #1a1506", background:"#100d06", overflow:"hidden", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          {member.photo ? <img src={member.photo} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:18 }}>👤</span>}
+          {avatarSrc ? <img src={avatarSrc} style={{ width:"100%", height:"100%", objectFit:"cover" }} alt="" /> : <span style={{ fontSize:18 }}>👤</span>}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color: isExecutive ? "#f0d878" : rs.nameColor, textShadow: (!isExecutive && rs.nameGlow) ? rs.nameGlow : "none", letterSpacing:"0.05em" }}>{member.nume||<span style={{ color:"#2a1f06" }}>Fără Nume</span>}</div>
@@ -567,7 +576,7 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
       {expanded && (
         <div style={{ borderTop:"1px solid #0e0a02", padding:"16px", display:"flex", flexDirection:"column", gap:16 }}>
           <div style={{ display:"flex", gap:16, alignItems:"flex-start" }}>
-            <PhotoUpload photo={member.photo} onChange={v => update("photo",v)} disabled={!isAdmin} />
+            <PhotoUpload photo={member.photo} onChange={v => update("photo",v)} disabled={!isAdmin} fallback={isSalaSport ? SALA_SPORT_AVATAR : null} />
             <div style={{ flex:1, display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
               <FieldInput label="Nume" value={member.nume} onChange={v => update("nume",v)} disabled={!isAdmin} />
               <FieldInput label="Luni" value={member.luni} onChange={v => update("luni",v)} disabled={!isAdmin} />
@@ -1043,7 +1052,10 @@ function MembersSection({ role, currentUser }) {
   const archivedCount = isGeneralAdmin ? Object.values(members).flat().filter(m => m.archived).length : 0;
   const allArchivedMembers = isGeneralAdmin
     ? Object.entries(members).flatMap(([lid, mems]) =>
-        (mems||[]).filter(m => m.archived).map(m => ({ ...m, _listName: lists.find(l => l.id === lid)?.name || "?" }))
+        (mems||[]).filter(m => m.archived).map(m => {
+          const l = lists.find(x => x.id === lid);
+          return { ...m, _listName: l?.name || "?", _avatar: m.photo || (isSalaSportList(l) ? SALA_SPORT_AVATAR : null) };
+        })
       ).sort((a, b) => new Date(b.archived_at||0) - new Date(a.archived_at||0))
     : [];
 
@@ -1121,7 +1133,7 @@ function MembersSection({ role, currentUser }) {
                 const sc = ARCHIVE_STATUS_COLORS[m.archive_status] || { bg:"#0f0a0a", border:"#2a1a06", color:"#8a6c1e", label: m.archive_status || "?" };
                 return (
                   <div key={m.id} style={{ background:"#0c0a04", border:"1px solid #1a1506", borderRadius:8, padding:"14px 18px", display:"flex", gap:16, alignItems:"flex-start" }}>
-                    {m.photo && <img src={m.photo} alt="" style={{ width:52, height:64, objectFit:"cover", borderRadius:5, border:"1px solid #2a1a06", flexShrink:0 }} />}
+                    {m._avatar && <img src={m._avatar} alt="" style={{ width:52, height:64, objectFit:"cover", borderRadius:5, border:"1px solid #2a1a06", flexShrink:0 }} />}
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:6 }}>
                         <span style={{ fontFamily:"'Rajdhani', sans-serif", fontWeight:700, fontSize:16, color:"#c9a030" }}>{m.nume || "—"}</span>
