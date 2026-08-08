@@ -1,0 +1,23 @@
+# Netlify deployment config for the Vite + React SPA.
+#
+# Supabase credentials: the two VITE_* values below are baked into the client
+# bundle at build time (that is how Vite works — anything VITE_-prefixed is
+# public). The key is a Supabase *publishable* key, so it is meant to be shipped
+# to browsers; real protection lives in RLS + the session-token RPCs. Values set
+# in the Netlify UI (Site settings → Environment variables) override these, so
+# pointing the site at a different Supabase project needs no code change.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  VITE_SUPABASE_URL = "https://nghnpiundobkoxfixkum.supabase.co"
+  VITE_SUPABASE_KEY = "sb_publishable_2AXuOpjsSkw9g2yQ1Wsn6A_npjHK1Tz"
+
+# Single-page app: every path serves index.html instead of 404-ing.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

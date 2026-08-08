@@ -1,0 +1,141 @@
+-- Drop old insecure policies
+drop policy if exists "Allow all" on lists;
+drop policy if exists "Allow all" on members;
+
+-- Add rank_system column if it doesn't already exist
+alter table lists add column if not exists rank_system text default 'default';
+
+-- Make policy creation idempotent
+drop policy if exists "Public read lists" on lists;
+drop policy if exists "Auth write lists" on lists;
+drop policy if exists "Public read members" on members;
+drop policy if exists "Auth write members" on members;
+
+create table if not exists zone_approvals (
+  id uuid primary key default gen_random_uuid(),
+  name text,
+  status text default 'Neaprobat',
+  weapon text default 'Fara Arma',
+  approved_at timestamptz,
+  created_at timestamptz default now()
+);
+
+alter table zone_approvals add column if not exists logo text;
+alter table zone_approvals add column if not exists category text default 'oficiale';
+
+alter table zone_approvals enable row level security;
+
+drop policy if exists "Public read zone_approvals" on zone_approvals;
+drop policy if exists "Auth write zone_approvals" on zone_approvals;
+
+create policy "Public read zone_approvals"
+on zone_approvals
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write zone_approvals"
+on zone_approvals
+for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "Public read lists"
+on lists
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write lists"
+on lists
+for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "Public read members"
+on members
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write members"
+on members
+for all
+to authenticated
+using (true)
+with check (true);
+
+-- New tables
+create table if not exists heists (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  cover_photo text,
+  created_at timestamp default now()
+);
+
+create table if not exists heist_items (
+  id uuid primary key default gen_random_uuid(),
+  heist_id uuid references heists(id) on delete cascade,
+  photo text,
+  info text default '',
+  created_at timestamp default now()
+);
+
+create table if not exists zone_info (
+  id uuid primary key default gen_random_uuid(),
+  photo text,
+  description text default '',
+  created_at timestamp default now()
+);
+
+alter table heists enable row level security;
+alter table heist_items enable row level security;
+alter table zone_info enable row level security;
+
+drop policy if exists "Public read heists" on heists;
+drop policy if exists "Auth write heists" on heists;
+drop policy if exists "Public read heist_items" on heist_items;
+drop policy if exists "Auth write heist_items" on heist_items;
+drop policy if exists "Public read zone_info" on zone_info;
+drop policy if exists "Auth write zone_info" on zone_info;
+
+create policy "Public read heists"
+on heists
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write heists"
+on heists
+for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "Public read heist_items"
+on heist_items
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write heist_items"
+on heist_items
+for all
+to authenticated
+using (true)
+with check (true);
+
+create policy "Public read zone_info"
+on zone_info
+for select
+to PUBLIC
+using (true);
+
+create policy "Auth write zone_info"
+on zone_info
+for all
+to authenticated
+using (true)
+with check (true);
