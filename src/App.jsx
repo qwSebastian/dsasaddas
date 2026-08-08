@@ -2200,15 +2200,15 @@ function SistemPuncteSection({ isAdmin }) {
             {regRows.map(r => <RegRow key={r.id} rule={r} />)}
           </div>
 
-          {/* CERINTE HALF V sub-section */}
+          {/* CERINȚE SICARIOS sub-section */}
           <div style={{ marginTop: 8, background: "var(--surface-2)", border: "1px solid var(--border-strong)", borderRadius: 10, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
               <div style={{ fontFamily: "'Rajdhani', sans-serif", fontWeight: 700, fontSize: 13, color: "var(--gold)", letterSpacing: "0.1em", textTransform: "uppercase" }}>
-                Cerințe Half V
+                Cerințe Sicarios
               </div>
               {isAdmin && <button className="ev-add-dashed" style={addBtnStyle} onClick={() => setAddingCategory({ key: "half_v_reguli", hasValue: false })}>+ Adaugă</button>}
             </div>
-            <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "var(--text-dim)", margin: 0 }}>Trecerea de la Old Mob la Half V vine cu un anumit set de reguli:</p>
+            <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 12, color: "var(--text-dim)", margin: 0 }}>Trecerea de la S2 la S1 vine cu un anumit set de reguli:</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {halfVRows.map(r => <HalfVRow key={r.id} rule={r} />)}
             </div>
