@@ -173,6 +173,8 @@ function Lightbox({ src, onClose }) {
 }
 
 // ─── Login Modal ─────────────────────────────────────────────────────────────
+// Shares the entry gate's artwork so signing in reads as the same screen with
+// its controls swapped, rather than a dialog floating over a dimmed page.
 function LoginModal({ onClose, onLogin, onLoginAccount }) {
   const [mode, setMode] = useState("account");
   const [email, setEmail] = useState("");
@@ -180,12 +182,6 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const inpStyle = {
-    background:"var(--surface-3)", border:"1px solid var(--border-gold)", borderRadius:3,
-    color:"var(--gold-soft)", fontFamily:"'Barlow', sans-serif", fontSize:14,
-    padding:"9px 14px", outline:"none", width:"100%", boxSizing:"border-box",
-  };
 
   const submitGA = async () => {
     setLoading(true); setError("");
@@ -202,51 +198,36 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
     setLoading(false);
   };
 
-  const tabStyle = (active) => ({
-    flex:1, background:"transparent", border:"none",
-    borderBottom: active ? "2px solid var(--gold)" : "2px solid var(--border-gold)",
-    color: active ? "var(--gold-soft)" : "var(--text-dim)",
-    fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:11,
-    padding:"10px 0", cursor:"pointer", letterSpacing:"0.10em",
-  });
+  const submit = mode === "ga" ? submitGA : submitAccount;
 
   return (
-    <div style={{ position:"fixed", inset:0, background:"var(--overlay)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000, backdropFilter:"blur(4px)" }}>
-      <div className="ev-modal-frame">
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, marginBottom:4 }}>
-          <img src={logoUrl} alt="Aldrick Enterprises" style={{ width:84, height:84, objectFit:"contain" }} />
-          <div className="ev-gold-text" style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:14, letterSpacing:"0.16em", textAlign:"center" }}>ALDRICK ENTERPRISES</div>
+    <div className="ev-gate" style={{ position:"fixed", inset:0, zIndex:1000 }}>
+      <div className="ev-gate-inner">
+        <div className="ev-gate-tabs">
+          <button className={`ev-glass ev-glass-tab${mode==="account"?" is-active":""}`}
+            onClick={() => { setMode("account"); setError(""); }}>Membru / Admin2</button>
+          <button className={`ev-glass ev-glass-tab${mode==="ga"?" is-active":""}`}
+            onClick={() => { setMode("ga"); setError(""); }}>General Admin</button>
         </div>
-        <div style={{ display:"flex", borderBottom:"1px solid var(--border-gold)", marginBottom:6 }}>
-          <button style={tabStyle(mode==="account")} onClick={() => { setMode("account"); setError(""); }}>CONT MEMBRU / ADMIN 2</button>
-          <button style={tabStyle(mode==="ga")} onClick={() => { setMode("ga"); setError(""); }}>GENERAL ADMIN</button>
-        </div>
+
         {mode === "ga" ? (
-          <>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email"
-              style={inpStyle} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Parolă"
-              onKeyDown={e => e.key==="Enter" && submitGA()}
-              style={{ ...inpStyle, border:`1px solid ${error?"var(--danger)":"var(--border-gold)"}` }}
-              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor=error?"var(--danger)":"var(--border-gold)"} />
-          </>
+          <input className="ev-glass ev-glass-input" type="email" value={email} autoComplete="username"
+            onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key==="Enter" && submit()} placeholder="Email" />
         ) : (
-          <>
-            <input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Nickname"
-              style={inpStyle} onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Parolă"
-              onKeyDown={e => e.key==="Enter" && submitAccount()}
-              style={{ ...inpStyle, border:`1px solid ${error?"var(--danger)":"var(--border-gold)"}` }}
-              onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor=error?"var(--danger)":"var(--border-gold)"} />
-          </>
+          <input className="ev-glass ev-glass-input" value={nickname} autoComplete="username"
+            onChange={e => setNickname(e.target.value)} onKeyDown={e => e.key==="Enter" && submit()} placeholder="Nickname" />
         )}
-        {error && <div style={{ color:"var(--danger)", fontFamily:"'Barlow', sans-serif", fontSize:12 }}>{error}</div>}
-        <div style={{ display:"flex", gap:8 }}>
-          <button onClick={mode==="ga" ? submitGA : submitAccount} disabled={loading}
-            style={{ flex:1, background:"linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%)", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--on-gold)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.08em" }}>
-            {loading ? "..." : "INTRĂ"}
+        <input className={`ev-glass ev-glass-input${error?" is-error":""}`} type="password" value={password}
+          autoComplete="current-password" onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key==="Enter" && submit()} placeholder="Parolă" />
+
+        {error && <div className="ev-gate-error">{error}</div>}
+
+        <div className="ev-gate-row">
+          <button className="ev-glass ev-glass-btn" onClick={submit} disabled={loading}>
+            {loading ? "..." : "Intră"}
           </button>
-          <button onClick={onClose} style={{ flex:1, background:"transparent", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"10px", cursor:"pointer" }}>Anulează</button>
+          <button className="ev-glass ev-glass-btn" onClick={onClose}>Anulează</button>
         </div>
       </div>
     </div>
@@ -254,55 +235,32 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
 }
 
 // ─── Visitor Entry Gate ───────────────────────────────────────────────────────
+// Full-bleed artwork (public/entry-bg.png) with frosted-glass controls. The
+// artwork already carries the wordmark, so no logo or title is drawn here.
 function EntryGate({ onEnter, onOpenLogin, theme, onToggleTheme }) {
   const [nickname, setNickname] = useState("");
   const submit = () => { if (nickname.trim()) onEnter(nickname.trim()); };
   return (
-    <div style={{ minHeight:"100vh", background:"var(--bg)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"24px 16px", position:"relative" }}>
-      <div style={{ position:"absolute", top:14, right:14, zIndex:2 }}>
+    <div className="ev-gate">
+      <div className="ev-gate-corner">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
 
-      {/* Logo — large, centred */}
-      <img src={logoUrl} alt="Aldrick Enterprises"
-        style={{ width:220, height:220, objectFit:"contain", marginBottom:8, filter:"drop-shadow(0 4px 40px var(--border-gold))" }} />
+      <div className="ev-gate-inner">
+        <h1 className="ev-gate-title">Introdu un nickname pentru a intra ca vizitator</h1>
 
-      {/* Title */}
-      <div style={{ fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:32, letterSpacing:"0.12em", textAlign:"center", marginBottom:4, color:"var(--gold)" }}>
-        Aldrick Enterprises
-      </div>
-      <div style={{ fontFamily:"'Cinzel', serif", fontStyle:"italic", fontSize:13, color:"var(--gold-dim)", letterSpacing:"0.08em", marginBottom:24, textAlign:"center" }}>
-        Family is Everything and Everything is Family
-      </div>
+        <input className="ev-glass ev-glass-input" value={nickname} onChange={e => setNickname(e.target.value)}
+          onKeyDown={e => e.key==="Enter" && submit()} placeholder="Nickname" aria-label="Nickname" />
 
-      {/* Faction photo banner */}
-      <div style={{ width:"100%", maxWidth:700, marginBottom:28, borderRadius:10, overflow:"hidden", border:"1px solid var(--border-gold)", boxShadow:"0 4px 40px var(--overlay)" }}>
-        <img src="/sur13.png" alt="Aldrick Enterprises" style={{ width:"100%", display:"block", objectFit:"cover", maxHeight:280 }} />
-      </div>
+        <button className="ev-glass ev-glass-btn" onClick={submit} disabled={!nickname.trim()}>
+          Intră ca vizitator
+        </button>
 
-      {/* Ornate framed login card */}
-      <div className="ev-entry-frame">
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          <div style={{ fontFamily:"'Barlow', sans-serif", fontSize:12, color:"var(--gold-dim)", textAlign:"center", letterSpacing:"0.06em" }}>
-            Introdu un nickname pentru a intra ca vizitator
-          </div>
-          <input value={nickname} onChange={e => setNickname(e.target.value)} onKeyDown={e => e.key==="Enter" && submit()} placeholder="Nickname"
-            style={{ background:"var(--surface-3)", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--gold-soft)", fontFamily:"'Barlow', sans-serif", fontSize:14, padding:"10px 14px", outline:"none", width:"100%", boxSizing:"border-box" }}
-            onFocus={e => e.target.style.borderColor="var(--gold)"} onBlur={e => e.target.style.borderColor="var(--border-gold)"} />
-          <button onClick={submit} disabled={!nickname.trim()}
-            style={{ background: nickname.trim() ? "linear-gradient(180deg, var(--gold) 0%, var(--gold-dim) 100%)" : "var(--gold-glow)", border:"1px solid var(--gold-glow)", borderRadius:3, color: nickname.trim() ? "var(--on-gold)" : "var(--text-dim)", fontFamily:"'Cinzel', serif", fontWeight:700, fontSize:13, padding:"11px", cursor: nickname.trim() ? "pointer" : "default", letterSpacing:"0.10em" }}>
-            INTRĂ CA VIZITATOR
-          </button>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ flex:1, height:1, background:"var(--border-gold)" }} />
-            <span style={{ fontFamily:"'Barlow', sans-serif", fontSize:10, color:"var(--text-dim)", letterSpacing:"0.14em" }}>SAU</span>
-            <div style={{ flex:1, height:1, background:"var(--border-gold)" }} />
-          </div>
-          <button onClick={onOpenLogin}
-            style={{ background:"transparent", border:"1px solid var(--border-gold)", borderRadius:3, color:"var(--gold)", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:13, padding:"10px", cursor:"pointer", letterSpacing:"0.06em" }}>
-            Am un cont (Membru / Admin)
-          </button>
-        </div>
+        <div className="ev-gate-or">sau</div>
+
+        <button className="ev-glass ev-glass-btn ev-glass-btn-wide" onClick={onOpenLogin}>
+          Am un cont (Membru / Admin)
+        </button>
       </div>
     </div>
   );

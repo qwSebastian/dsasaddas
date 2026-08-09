@@ -366,3 +366,163 @@ body { color: var(--text); }
 @media (pointer: coarse) {
   button, .ev-cycle, .ev-license, .ev-chip { min-height: 32px; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   ENTRY GATE + LOGIN
+   Full-bleed artwork with frosted-glass controls. Both screens share
+   the same background so logging in reads as the same page swapping
+   its controls, not a dialog over a dimmed one.
+
+   The artwork is dark by design, so this screen keeps light controls
+   in both themes — theming it would wreck the contrast against the
+   image. Everything past the gate follows the chosen theme.
+
+   Drop the background at public/entry-bg.png. Until it exists the
+   gradient layer underneath renders on its own, so the screen still
+   looks deliberate rather than broken.
+   ════════════════════════════════════════════════════════════════ */
+.ev-gate {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  position: relative;
+  background-color: #0e0718;
+  background-image:
+    url('/entry-bg.png'),
+    radial-gradient(ellipse at 50% 18%, #6d2ea8 0%, #2a1046 42%, #0e0718 78%);
+  background-size: cover, cover;
+  background-position: center center, center center;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* Keeps the glass legible over the busiest parts of the artwork. */
+.ev-gate::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 62%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 45%, transparent 72%);
+  pointer-events: none;
+}
+
+.ev-gate-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-top: 6vh;
+}
+
+.ev-gate-corner { position: absolute; top: 14px; right: 14px; z-index: 2; }
+.ev-gate .ev-theme-toggle {
+  background: rgba(255,255,255,0.14);
+  border: 1px solid rgba(255,255,255,0.30);
+  color: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.ev-gate .ev-theme-toggle:hover { background: rgba(255,255,255,0.24); border-color: rgba(255,255,255,0.5); }
+
+.ev-gate-title {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: clamp(19px, 2.5vw, 34px);
+  line-height: 1.2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(0,0,0,0.75), 0 0 40px rgba(0,0,0,0.5);
+  margin-bottom: 4px;
+  /* Wider than the controls so it holds one line on desktop, the way the
+     mockup reads; the controls stay at their narrower measure. */
+  width: min(920px, 92vw);
+}
+
+.ev-gate-or {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  font-size: clamp(15px, 1.5vw, 22px);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0,0,0,0.7);
+}
+
+.ev-gate-error {
+  font-family: 'Barlow', sans-serif;
+  font-size: 13px;
+  color: #ffb4b4;
+  text-align: center;
+  text-shadow: 0 1px 10px rgba(0,0,0,0.8);
+}
+
+.ev-gate-tabs, .ev-gate-row { display: flex; gap: 10px; width: 100%; }
+.ev-gate-tabs .ev-glass-tab, .ev-gate-row .ev-glass-btn { flex: 1; }
+
+/* ── The frosted surface ── */
+.ev-glass {
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 12px;
+  color: #fff;
+  backdrop-filter: blur(13px) saturate(130%);
+  -webkit-backdrop-filter: blur(13px) saturate(130%);
+  box-shadow: 0 6px 26px rgba(0, 0, 0, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s, box-shadow 0.18s;
+}
+
+.ev-glass-input {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 16px;   /* 16px keeps iOS Safari from zooming on focus */
+  text-align: center;
+  outline: none;
+}
+.ev-glass-input::placeholder { color: rgba(255, 255, 255, 0.82); text-transform: uppercase; letter-spacing: 0.10em; }
+.ev-glass-input:focus {
+  background: rgba(255, 255, 255, 0.20);
+  border-color: rgba(255, 255, 255, 0.62);
+  box-shadow: 0 6px 26px rgba(0,0,0,0.30), 0 0 0 3px rgba(255,255,255,0.13) !important;
+}
+.ev-glass-input.is-error { border-color: rgba(255, 130, 130, 0.75); }
+
+.ev-glass-btn {
+  width: 100%;
+  padding: 15px 22px;
+  font-size: clamp(13px, 1.1vw, 16px);
+  cursor: pointer;
+}
+.ev-glass-btn-wide { max-width: 100%; }
+.ev-glass-btn:not(:disabled):hover { background: rgba(255, 255, 255, 0.24); border-color: rgba(255, 255, 255, 0.55); }
+.ev-glass-btn:not(:disabled):active { transform: scale(0.985); }
+.ev-glass-btn:disabled { opacity: 0.72; cursor: default; }
+
+.ev-glass-tab {
+  padding: 9px 14px;
+  font-size: clamp(11px, 0.9vw, 13px);
+  cursor: pointer;
+  border-radius: 10px;
+}
+.ev-glass-tab.is-active {
+  background: rgba(255, 255, 255, 0.30);
+  border-color: rgba(255, 255, 255, 0.62);
+}
+
+@media (max-width: 640px) {
+  .ev-gate-inner { max-width: 100%; gap: 14px; margin-top: 4vh; }
+  .ev-gate-title { font-size: 19px; letter-spacing: 0.04em; width: 100%; }
+  .ev-glass-input, .ev-glass-btn { padding: 13px 16px; }
+  .ev-gate-tabs { flex-direction: column; }
+}
