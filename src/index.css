@@ -377,9 +377,10 @@ body { color: var(--text); }
    in both themes — theming it would wreck the contrast against the
    image. Everything past the gate follows the chosen theme.
 
-   Drop the background at public/entry-bg.png. Until it exists the
-   gradient layer underneath renders on its own, so the screen still
-   looks deliberate rather than broken.
+   Artwork by sebastian.0115, shipped at two sizes: entry-bg.jpg for
+   landscape and a 1280px entry-bg-sm.jpg for portrait, where it is
+   drawn at a smaller pixel size anyway. The gradient beneath each is
+   a fallback, so a failed image never leaves a bare screen.
    ════════════════════════════════════════════════════════════════ */
 .ev-gate {
   min-height: 100vh;
@@ -391,11 +392,47 @@ body { color: var(--text); }
   position: relative;
   background-color: #0e0718;
   background-image:
-    url('/entry-bg.png'),
+    url('/entry-bg.jpg'),
     radial-gradient(ellipse at 50% 18%, #6d2ea8 0%, #2a1046 42%, #0e0718 78%);
   background-size: cover, cover;
   background-position: center center, center center;
   background-repeat: no-repeat, no-repeat;
+}
+
+/* The artwork is 16:9. On anything narrower, `cover` crops its sides — and
+   the wordmark runs nearly edge to edge, so that crop eats the branding.
+   Pin it full width at the top instead and fade its lower edge into the
+   ground. The fade is not optional: the image's bottom row is mid-purple
+   (~#351a66), so butting it against the ground colour would leave a seam.
+   The fade layer is sized to the image band — 100vw at 16:9 is 56.25vw. */
+@media (max-aspect-ratio: 16 / 9) {
+  .ev-gate {
+    background-image:
+      linear-gradient(180deg, rgba(14,7,24,0) 80%, rgba(14,7,24,0.72) 93%, #0e0718 100%),
+      url('/entry-bg.jpg'),
+      radial-gradient(ellipse at 50% 24%, #3a1560 0%, #1c0b34 48%, #0e0718 82%);
+    background-size: 100% 56.25vw, 100% auto, cover;
+    background-position: top center, top center, center center;
+    background-repeat: no-repeat, no-repeat, no-repeat;
+  }
+}
+
+/* Portrait: the band is short relative to the screen, so the fade gets a
+   long runway and the controls clear the artwork instead of sitting on the
+   crowd. The smaller file is plenty here — it is drawn at ~1280px at most. */
+@media (max-aspect-ratio: 1 / 1) {
+  .ev-gate {
+    background-image:
+      linear-gradient(180deg, rgba(14,7,24,0) 52%, rgba(14,7,24,0.6) 80%, #0e0718 100%),
+      url('/entry-bg-sm.jpg'),
+      radial-gradient(ellipse at 50% 30%, #3a1560 0%, #1c0b34 45%, #0e0718 80%);
+    background-size: 100% 56.25vw, 100% auto, cover;
+    background-position: top center, top center, center center;
+    background-repeat: no-repeat, no-repeat, no-repeat;
+  }
+  .ev-gate-inner { margin-top: 44vw; }
+  /* Clear of the artwork band — at top right it sits on the wordmark. */
+  .ev-gate-corner { top: calc(56.25vw + 10px); }
 }
 
 /* Keeps the glass legible over the busiest parts of the artwork. */
@@ -442,7 +479,7 @@ body { color: var(--text); }
   margin-bottom: 4px;
   /* Wider than the controls so it holds one line on desktop, the way the
      mockup reads; the controls stay at their narrower measure. */
-  width: min(920px, 92vw);
+  width: min(1100px, 94vw);
 }
 
 .ev-gate-or {
