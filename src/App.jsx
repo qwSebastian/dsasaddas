@@ -230,6 +230,7 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
           <button className="ev-glass ev-glass-btn" onClick={onClose}>Anulează</button>
         </div>
       </div>
+      <div className="ev-gate-credit">Artwork &amp; design © sebastian.0115</div>
     </div>
   );
 }
@@ -262,6 +263,8 @@ function EntryGate({ onEnter, onOpenLogin, theme, onToggleTheme }) {
           Am un cont (Membru / Admin)
         </button>
       </div>
+
+      <div className="ev-gate-credit">Artwork &amp; design © sebastian.0115</div>
     </div>
   );
 }

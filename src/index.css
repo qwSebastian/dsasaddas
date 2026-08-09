@@ -526,3 +526,21 @@ body { color: var(--text); }
   .ev-glass-input, .ev-glass-btn { padding: 13px 16px; }
   .ev-gate-tabs { flex-direction: column; }
 }
+
+/* Artwork credit — bottom corner of the gate and login screens. */
+.ev-gate-credit {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  z-index: 2;
+  font-family: 'Barlow', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.62);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.8);
+  user-select: none;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .ev-gate-credit { font-size: 10px; bottom: 10px; right: 10px; left: 10px; text-align: center; }
+}
