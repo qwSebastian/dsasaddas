@@ -202,7 +202,7 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
 
   return (
     <div className="ev-gate" style={{ position:"fixed", inset:0, zIndex:1000 }}>
-      <div className="ev-gate-inner">
+      <div className="ev-gate-inner is-login">
         <div className="ev-gate-tabs">
           <button className={`ev-glass ev-glass-tab${mode==="account"?" is-active":""}`}
             onClick={() => { setMode("account"); setError(""); }}>Membru / Admin2</button>

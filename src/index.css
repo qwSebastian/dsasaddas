@@ -386,74 +386,70 @@ body { color: var(--text); }
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px 16px;
+  padding: 0 16px;
   position: relative;
   background-color: #0e0718;
+  /* Full bleed, every screen. The gradient below is only a fallback for a
+     failed image request — in normal use the artwork covers it entirely. */
   background-image:
     url('/entry-bg.jpg'),
-    radial-gradient(ellipse at 50% 18%, #6d2ea8 0%, #2a1046 42%, #0e0718 78%);
+    radial-gradient(ellipse at 50% 24%, #3a1560 0%, #1c0b34 48%, #0e0718 82%);
   background-size: cover, cover;
   background-position: center center, center center;
   background-repeat: no-repeat, no-repeat;
 }
 
-/* The artwork is 16:9. On anything narrower, `cover` crops its sides — and
-   the wordmark runs nearly edge to edge, so that crop eats the branding.
-   Pin it full width at the top instead and fade its lower edge into the
-   ground. The fade is not optional: the image's bottom row is mid-purple
-   (~#351a66), so butting it against the ground colour would leave a seam.
-   The fade layer is sized to the image band — 100vw at 16:9 is 56.25vw. */
-@media (max-aspect-ratio: 16 / 9) {
+/* Narrow screens draw the artwork at a fraction of its full size, so serve
+   the smaller file. Keyed on width, not aspect: the fit is identical. */
+@media (max-width: 900px) {
   .ev-gate {
     background-image:
-      linear-gradient(180deg, rgba(14,7,24,0) 80%, rgba(14,7,24,0.72) 93%, #0e0718 100%),
-      url('/entry-bg.jpg'),
-      radial-gradient(ellipse at 50% 24%, #3a1560 0%, #1c0b34 48%, #0e0718 82%);
-    background-size: 100% 56.25vw, 100% auto, cover;
-    background-position: top center, top center, center center;
-    background-repeat: no-repeat, no-repeat, no-repeat;
-  }
-}
-
-/* Portrait: the band is short relative to the screen, so the fade gets a
-   long runway and the controls clear the artwork instead of sitting on the
-   crowd. The smaller file is plenty here — it is drawn at ~1280px at most. */
-@media (max-aspect-ratio: 1 / 1) {
-  .ev-gate {
-    background-image:
-      linear-gradient(180deg, rgba(14,7,24,0) 52%, rgba(14,7,24,0.6) 80%, #0e0718 100%),
       url('/entry-bg-sm.jpg'),
-      radial-gradient(ellipse at 50% 30%, #3a1560 0%, #1c0b34 45%, #0e0718 80%);
-    background-size: 100% 56.25vw, 100% auto, cover;
-    background-position: top center, top center, center center;
-    background-repeat: no-repeat, no-repeat, no-repeat;
+      radial-gradient(ellipse at 50% 24%, #3a1560 0%, #1c0b34 48%, #0e0718 82%);
   }
-  .ev-gate-inner { margin-top: 44vw; }
-  /* Clear of the artwork band — at top right it sits on the wordmark. */
-  .ev-gate-corner { top: calc(56.25vw + 10px); }
 }
 
-/* Keeps the glass legible over the busiest parts of the artwork. */
+/* A whisper of a scrim. The artwork's midfield is dark where the controls
+   sit, so this only insures against an odd crop putting white type over one
+   of the bright magenta blowouts — it should not read as a layer. */
 .ev-gate::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 62%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.18) 45%, transparent 72%);
+  background: radial-gradient(ellipse at 50% 68%, rgba(0,0,0,0.30) 0%, rgba(0,0,0,0.12) 48%, transparent 74%);
   pointer-events: none;
 }
 
+/* Portrait crops hard into the centre of the frame, which is busier than the
+   midfield the controls were placed against — a touch more scrim there. */
+@media (max-aspect-ratio: 3 / 4) {
+  .ev-gate::before {
+    background: radial-gradient(ellipse at 50% 60%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0.12) 78%);
+  }
+}
+
+/* Controls sit low in the frame, as drawn: the heading lands around 38% of
+   the height and the last button near 88%, so the block is anchored from the
+   top rather than centred. Gaps scale with height to hold that rhythm. */
 .ev-gate-inner {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 460px;
+  max-width: 420px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  margin-top: 6vh;
+  gap: clamp(15px, 7vh, 78px);
+  padding-top: 37vh;
+  padding-bottom: 6vh;
+}
+
+/* The login screen's controls are drawn tighter and start lower. */
+.ev-gate-inner.is-login {
+  gap: clamp(11px, 2.8vh, 30px);
+  padding-top: 46vh;
 }
 
 .ev-gate-corner { position: absolute; top: 14px; right: 14px; z-index: 2; }
@@ -558,10 +554,10 @@ body { color: var(--text); }
 }
 
 @media (max-width: 640px) {
-  .ev-gate-inner { max-width: 100%; gap: 14px; margin-top: 4vh; }
+  .ev-gate-inner { max-width: 100%; padding-top: 30vh; }
+  .ev-gate-inner.is-login { padding-top: 34vh; }
   .ev-gate-title { font-size: 19px; letter-spacing: 0.04em; width: 100%; }
   .ev-glass-input, .ev-glass-btn { padding: 13px 16px; }
-  .ev-gate-tabs { flex-direction: column; }
 }
 
 /* Artwork credit — bottom corner of the gate and login screens. */
