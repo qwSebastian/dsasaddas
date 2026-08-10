@@ -140,6 +140,28 @@ const STATUS_OPTIONS = ["Activ","Inactiv"];
 const TASK_OPTIONS = ["Platit","Neplatit","Scutit"];
 const STATUS_COLORS = { Activ:{bg:"var(--success-bg)",text:"var(--success)",border:"var(--success)"}, Inactiv:{bg:"var(--surface-hover)",text:"var(--danger)",border:"var(--danger)"} };
 const TASK_COLORS = { Platit:{bg:"var(--info-bg)",text:"var(--info)",border:"var(--info)"}, Neplatit:{bg:"var(--surface-3)",text:"var(--warn)",border:"var(--warn)"}, Scutit:{bg:"var(--surface-3)",text:"var(--gold-dim)",border:"var(--gold)"} };
+// Human labels for member fields, used when logging edits.
+const MEMBER_FIELD_LABELS = {
+  nume:"Nume", luni:"Luni", porecla:"Poreclă", cnp:"CNP", telefon:"Telefon",
+  inmatriculare:"Înmatriculare", rank:"Rank", status:"Status", task:"Task",
+  puncte:"Puncte", photo:"Fotografie", executive:"Executive", card_bg:"Fundal card",
+  concediu_start:"Concediu (de la)", concediu_end:"Concediu (până la)",
+  hs_driver:"Licență HS Driver", pilot_heli:"Licență Pilot Heli",
+  pilot_avion:"Licență Pilot Avion", barca:"Licență Barcă",
+};
+
+// Free-text fields fire on every keystroke; their log rows are coalesced.
+const MEMBER_TEXT_FIELDS = new Set(["nume","luni","porecla","cnp","telefon","inmatriculare"]);
+
+const fmtLogValue = (key, v) => {
+  if (v === null || v === undefined || v === "") return "gol";
+  if (typeof v === "boolean") return v ? "da" : "nu";
+  if (key === "photo") return "imagine";
+  if (key === "concediu_start" || key === "concediu_end") return fmtDate(v);
+  const str = String(v);
+  return str.length > 40 ? str.slice(0, 40) + "…" : str;
+};
+
 // Badge per admin_logs.kind. Anything unrecognised falls back to Admin.
 const LOG_KINDS = {
   visit: { label:"Vizită", color:"var(--gold-dim)", bg:"var(--surface-hover)", border:"var(--border)" },
@@ -460,15 +482,43 @@ function MemberCard({ member, onUpdate, onDelete, onArchive, onMoveUp, onMoveDow
   const [manualLabel, setManualLabel] = useState("");
   const [manualAmt, setManualAmt] = useState(1);
 
-  const update = (key, val) => {
-    onUpdate({ ...member, [key]: val });
-    const name = member.nume || "?";
-    if (key === "rank")   logAction("Modificat rank",   `${name}: ${val}`);
-    if (key === "status") logAction("Modificat status", `${name}: ${val}`);
-    if (key === "task")   logAction("Modificat task",   `${name}: ${val}`);
-    const lic = LICENSE_DEFS.find(l => l.key === key);
-    if (lic) logAction(`Licență ${val ? "acordată" : "revocată"}`, `${lic.label} → ${name}`);
+  // Coalesces a burst of typing into one log row: the value held when editing
+  // started is kept here, and the row is written once the field goes quiet.
+  const pendingEdits = useRef({});
+
+  const logFieldChange = (key, before, after) => {
+    const label = MEMBER_FIELD_LABELS[key] || key;
+    logAction(
+      `Modificat ${label}`,
+      `${member.nume || "?"}: ${fmtLogValue(key, before)} → ${fmtLogValue(key, after)}`
+    );
   };
+
+  const update = (key, val) => {
+    const before = member[key];
+    onUpdate({ ...member, [key]: val });
+    if (before === val) return;
+
+    if (MEMBER_TEXT_FIELDS.has(key)) {
+      const pending = pendingEdits.current[key];
+      if (pending) clearTimeout(pending.timer);
+      const original = pending ? pending.before : before;
+      pendingEdits.current[key] = {
+        before: original,
+        timer: setTimeout(() => {
+          delete pendingEdits.current[key];
+          if (original !== val) logFieldChange(key, original, val);
+        }, 1200),
+      };
+      return;
+    }
+    logFieldChange(key, before, val);
+  };
+
+  useEffect(() => () => {
+    // Card unmounting mid-edit: drop the timers, the row is already saved.
+    Object.values(pendingEdits.current).forEach(p => clearTimeout(p.timer));
+  }, []);
 
   const applyActivity = (taskLabel, pts, sign) => {
     const key = taskLabel + "|" + sign;
@@ -1009,6 +1059,7 @@ function MembersSection({ role, currentUser }) {
         return w ? { ...m, sort_order: w.sort_order } : m;
       })
     }));
+    logAction("Reordonat membru", `${sorted[idx]?.nume || "?"}: poziția ${idx + 1} → ${swapIdx + 1}`);
   };
 
   const archiveMember = async (listId, memberId, archiveStatus) => {
@@ -2201,6 +2252,10 @@ function AdminPanelSection({ role, currentUser }) {
   const [addError, setAddError] = useState("");
   const [addOk, setAddOk] = useState("");
   const [logLoading, setLogLoading] = useState(true);
+  const [logKind, setLogKind] = useState("all");
+  const [logSearch, setLogSearch] = useState("");
+  const [logFrom, setLogFrom] = useState("");
+  const [logTo, setLogTo] = useState("");
   const [panelTab, setPanelTab] = useState("conturi");
   const [gaNewNickname, setGaNewNickname] = useState(currentUser?.nickname || "");
   const [gaNickSaving, setGaNickSaving] = useState(false);
@@ -2219,7 +2274,7 @@ function AdminPanelSection({ role, currentUser }) {
     fetchAccounts();
     if (isGA) {
       // General Admin: authenticated JWT can read admin_logs directly + realtime.
-      supabase.from("admin_logs").select("*").order("created_at", { ascending: false }).limit(200)
+      supabase.from("admin_logs").select("*").order("created_at", { ascending: false }).limit(500)
         .then(({ data, error }) => {
           if (error) console.error("[AdminPanel] logs fetch error:", error.message);
           setLogs(data || []);
@@ -2227,7 +2282,7 @@ function AdminPanelSection({ role, currentUser }) {
         });
       const ch1 = supabase.channel("admin_logs_panel_rt")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "admin_logs" }, payload => {
-          setLogs(prev => [payload.new, ...prev].slice(0, 200));
+          setLogs(prev => [payload.new, ...prev].slice(0, 500));
         }).subscribe();
       return () => { supabase.removeChannel(ch1); };
     }
@@ -2413,18 +2468,50 @@ function AdminPanelSection({ role, currentUser }) {
         </div>
       )}
 
-      {panelTab === "jurnale" && (
+      {panelTab === "jurnale" && (() => {
+        const q = logSearch.trim().toLowerCase();
+        const fromTs = logFrom ? new Date(logFrom + "T00:00:00").getTime() : null;
+        const toTs   = logTo   ? new Date(logTo   + "T23:59:59").getTime() : null;
+        const shown = logs.filter(l => {
+          if (logKind !== "all" && (l.kind || "admin") !== logKind) return false;
+          const t = new Date(l.created_at).getTime();
+          if (fromTs !== null && t < fromTs) return false;
+          if (toTs !== null && t > toTs) return false;
+          if (q && ![l.actor_email, l.action, l.details].some(v => (v || "").toLowerCase().includes(q))) return false;
+          return true;
+        });
+        const filtering = logKind !== "all" || q || logFrom || logTo;
+        const inp = { background:"var(--bg)", border:"1px solid var(--border)", borderRadius:6, color:"var(--text)", fontFamily:"'Barlow', sans-serif", fontSize:12, padding:"6px 10px", outline:"none" };
+        return (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+            {[["all","Toate"],["admin","Admin"],["auth","Cont"],["visit","Vizită"]].map(([k, label]) => (
+              <button key={k} onClick={() => setLogKind(k)} className="ev-chip"
+                style={{ background: logKind===k ? "var(--gold)" : "var(--surface-1)", border:`1px solid ${logKind===k ? "var(--gold)" : "var(--border)"}`, color: logKind===k ? "var(--on-gold)" : "var(--text-dim)", borderRadius:6, padding:"5px 12px", fontFamily:"'Barlow', sans-serif", fontWeight:600, fontSize:11, cursor:"pointer", letterSpacing:"0.05em" }}>
+                {label}
+              </button>
+            ))}
+            <input value={logSearch} onChange={e => setLogSearch(e.target.value)} placeholder="🔍 Caută cine, ce, detalii..."
+              style={{ ...inp, flex:1, minWidth:180 }} />
+            <input type="date" value={logFrom} onChange={e => setLogFrom(e.target.value)} title="De la" style={inp} />
+            <input type="date" value={logTo} onChange={e => setLogTo(e.target.value)} title="Până la" style={inp} />
+            {filtering && (
+              <button onClick={() => { setLogKind("all"); setLogSearch(""); setLogFrom(""); setLogTo(""); }}
+                style={{ background:"transparent", border:"1px solid var(--border)", color:"var(--text-dim)", borderRadius:6, padding:"5px 10px", fontFamily:"'Barlow', sans-serif", fontSize:11, cursor:"pointer" }}>
+                ✕ Resetează
+              </button>
+            )}
+          </div>
           <div style={{ color:"var(--text-faint)", fontSize:10, fontFamily:"'Barlow', sans-serif", letterSpacing:"0.12em", textTransform:"uppercase" }}>
-            ULTIMELE {logs.length} ACȚIUNI
+            {filtering ? `${shown.length} DIN ${logs.length} ACȚIUNI` : `ULTIMELE ${logs.length} ACȚIUNI`}
           </div>
           {logLoading ? (
             <div style={{ color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13, padding:"32px", textAlign:"center" }}>Se încarcă...</div>
-          ) : logs.length === 0 ? (
-            <div style={{ background:"var(--surface-1)", border:"1px dashed var(--border)", borderRadius:8, padding:"28px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>Nicio acțiune înregistrată.</div>
+          ) : shown.length === 0 ? (
+            <div style={{ background:"var(--surface-1)", border:"1px dashed var(--border)", borderRadius:8, padding:"28px", textAlign:"center", color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:13 }}>{filtering ? "Nicio acțiune pentru filtrele alese." : "Nicio acțiune înregistrată."}</div>
           ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-              {logs.map(log => (
+              {shown.map(log => (
                 <div key={log.id} className="ev-list-row" style={{ background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:7, padding:"10px 14px", display:"flex", gap:12, alignItems:"flex-start", flexWrap:"wrap" }}>
                   <div style={{ flexShrink:0, minWidth:130, color:"var(--text-faint)", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>
                     {new Date(log.created_at).toLocaleDateString("ro-RO")} {new Date(log.created_at).toLocaleTimeString("ro-RO", { hour:"2-digit", minute:"2-digit" })}
@@ -2442,7 +2529,8 @@ function AdminPanelSection({ role, currentUser }) {
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
 
       {panelTab === "setari" && (
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
