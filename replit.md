@@ -42,6 +42,8 @@ Run these in the Supabase SQL Editor (project `nghnpiundobkoxfixkum`). The anon/
 
 3. `supabase/migrations/20260808_sala_sport_rename.sql` — **required for existing projects.** Renames the `Frizerie` list to `Sala Sport`, switches its `rank_system`/`list_type` from `frizerie` to `sala_sport`, and remaps every member's rank (`Frizer`→`Personal Trainer`, `Hairstylist`→`Supervizor`, `Manager`→`Manager Sala`). The list keeps its id, so members/sort order/`add_role` are untouched. Idempotent. New projects created from file 1 are already seeded this way and can skip it. The client normalises the legacy `frizerie` key at runtime, so the app keeps working before the migration is run — it just still shows the old list name until then.
 
+4. `supabase/migrations/20260810_lock_down_rpcs_and_policies.sql` — **security hardening, run after the others.** Collapses the duplicate `members` write policies down to one authenticated-only set (the permissive starter policies had been recreated alongside the strict ones, leaving roster writes open to anyone holding the publishable key), restricts `admin_logs` SELECT to authenticated, drops five superseded functions the client no longer calls (`create_admin2_account`, `delete_admin2_account`, `list_admin2_accounts`, `verify_admin2`, `verify_account`), and revokes anon EXECUTE on the four General Admin account RPCs plus `session_role`. Safe to re-run.
+
 After running them, also insert the GA row into `user_roles` (email + role `general_admin`) and create the GA user in Supabase Auth if not already present.
 
 ## Notes
