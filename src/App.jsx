@@ -264,10 +264,199 @@ function LoginModal({ onClose, onLogin, onLoginAccount }) {
   );
 }
 
+// ─── Public homepage ─────────────────────────────────────────────────────────
+// What a visitor lands on. The roster sits behind the entry gate; this is the
+// gym's shop window.
+
+const GYM_FACILITIES = [
+  { img: "/gym/greutati.jpg", title: "Sală de greutăți", text: "Bare olimpice, gantere până la 60 kg și trei rack-uri. Nimeni nu stă la coadă." },
+  { img: "/gym/aparate.jpg",  title: "Aparate",          text: "Presă, scripeți, tot ce îți trebuie ca să nu sari niciodată ziua de picioare." },
+  { img: "/gym/cardio.jpg",   title: "Cardio",           text: "Benzi, eliptice și sac de box pentru zilele în care ai ceva de scos din tine." },
+  { img: "/gym/exterior.jpg", title: "Zonă exterioară",  text: "Antrenament afară, pe faleză. La răsărit sau la trei dimineața, e deschis." },
+  { img: "/gym/vestiare.jpg", title: "Vestiare",         text: "Dulapuri cu cheie, dușuri cu apă caldă și prosop curat la intrare." },
+  { img: "/gym/hol.jpg",      title: "Non-stop",         text: "Ușile nu se închid. Vii când ai timp, nu când are sala program." },
+];
+
+const GYM_REVIEWS = [
+  { photo: "/gym/review-1.jpg", name: "Dimitri Vasilev",  meta: "membru din 2024",     text: "Am venit pentru o oră, am plecat după patru. Nu-mi mai simt brațele, dar mă întorc mâine." },
+  { photo: "/gym/review-2.jpg", name: "Marcus Reed",   meta: "membru din 2023",     text: "Singura sală din oraș unde nu-mi dispar discurile dintre serii. Asta spune tot." },
+  { photo: "/gym/review-3.jpg", name: "Kevin Lupei",      meta: "membru din 2025",     text: "Am intrat la 60 de kile. Acum ridic 60 de kile. Băieții știu ce fac." },
+  { photo: "/gym/review-4.jpg", name: "Ana-Maria Dobre",  meta: "membră din 2024",     text: "Aparatele merg toate, dușurile au apă caldă și nimeni nu se holbează. Perfect." },
+];
+
+function Stars() {
+  return (
+    <div className="hp-stars" aria-label="5 stele din 5">
+      {[0,1,2,3,4].map(i => <span key={i} aria-hidden="true">★</span>)}
+    </div>
+  );
+}
+
+function Homepage({ onEnter, onOpenLogin, theme, onToggleTheme }) {
+  const [team, setTeam] = useState([]);
+
+  // The roster is public, so the team strip shows the real Sala Sport list
+  // rather than placeholders. Silent if it is empty or unreachable.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data: lists } = await supabase.from("lists").select("*");
+      const gym = (lists || []).find(isSalaSportList);
+      if (!gym) return;
+      const { data } = await supabase.from("members").select("*").eq("list_id", gym.id);
+      if (!alive) return;
+      const ranks = getRanks(gym);
+      setTeam(
+        (data || [])
+          .filter(m => !m.archived && (m.nume || "").trim())
+          .sort((a, b) => (ranks.indexOf(b.rank) - ranks.indexOf(a.rank)) || (a.sort_order||0) - (b.sort_order||0))
+          .slice(0, 8)
+      );
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  const goTeam = () => document.getElementById("hp-echipa")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  return (
+    <div className="hp">
+      <header className="hp-nav">
+        <div className="hp-nav-brand">
+          <img src={logoUrl} alt="" aria-hidden="true" />
+          <div>
+            <strong>Aldrick Enterprise</strong>
+            <span>Sala Sport · Vespucci</span>
+          </div>
+        </div>
+        <div className="hp-nav-right">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+          <button className="hp-btn hp-btn-ghost" onClick={onOpenLogin}>Am cont</button>
+          <button className="hp-btn hp-btn-solid" onClick={onEnter}>Acces membri</button>
+        </div>
+      </header>
+
+      {/* ── Hero ── */}
+      <section className="hp-hero">
+        <div className="hp-hero-inner">
+          <span className="hp-eyebrow">Aldrick Enterprise</span>
+          <h1>Sala Sport</h1>
+          <p className="hp-lead">
+            Fier, aparate noi și aer condiționat, pe faleza din Vespucci.
+            Deschis non-stop, pentru oricine vrea să ridice ceva greu.
+          </p>
+          <div className="hp-hero-actions">
+            <button className="hp-btn hp-btn-solid hp-btn-lg" onClick={goTeam}>Vezi echipa</button>
+            <button className="hp-btn hp-btn-ghost hp-btn-lg" onClick={onEnter}>Acces membri</button>
+          </div>
+          <dl className="hp-facts">
+            <div><dt>Program</dt><dd>Non-stop</dd></div>
+            <div><dt>Locație</dt><dd>Vespucci Beach</dd></div>
+            <div><dt>Prima ședință</dt><dd>Gratis</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      {/* ── Facilities ── */}
+      <section className="hp-section">
+        <div className="hp-head">
+          <h2>Ce găsești la noi</h2>
+          <p>Tot ce ai nevoie ca să nu ai scuze.</p>
+        </div>
+        <div className="hp-grid">
+          {GYM_FACILITIES.map(f => (
+            <article key={f.title} className="hp-card">
+              <div className="hp-card-img"><img src={f.img} alt="" loading="lazy" /></div>
+              <h3>{f.title}</h3>
+              <p>{f.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Reception band ── */}
+      <section className="hp-band">
+        <div className="hp-band-img"><img src="/gym/receptie.jpg" alt="Recepția sălii" loading="lazy" /></div>
+        <div className="hp-band-text">
+          <h2>Treci pe la recepție</h2>
+          <p>
+            Prima ședință e din partea casei. Vii, îți arătăm sala, îți facem
+            fișa și te apuci de treabă în aceeași zi.
+          </p>
+          <p className="hp-muted">
+            Fără abonament pe un an, fără contract de zece pagini. Plătești luna
+            în care vii.
+          </p>
+          <button className="hp-btn hp-btn-solid" onClick={onEnter}>Acces membri</button>
+        </div>
+      </section>
+
+      {/* ── Team ── */}
+      <section className="hp-section" id="hp-echipa">
+        <div className="hp-head">
+          <h2>Echipa noastră</h2>
+          <p>Antrenorii și supervizorii care țin sala pe picioare.</p>
+        </div>
+        {team.length === 0 ? (
+          <p className="hp-empty">Echipa se actualizează. Revino în curând.</p>
+        ) : (
+          <div className="hp-team">
+            {team.map(m => (
+              <figure key={m.id} className="hp-member">
+                <div className="hp-member-img">
+                  <img src={m.photo || SALA_SPORT_AVATAR} alt="" loading="lazy" />
+                </div>
+                <figcaption>
+                  <strong>{m.nume}</strong>
+                  <span>{m.executive ? "Executive" : m.rank}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Reviews ── */}
+      <section className="hp-section hp-section-alt">
+        <div className="hp-head">
+          <h2>Ce spun clienții</h2>
+          <p>Note lăsate de membri, nu de noi.</p>
+        </div>
+        <div className="hp-reviews">
+          {GYM_REVIEWS.map(r => (
+            <article key={r.name} className="hp-review">
+              <Stars />
+              <p>„{r.text}”</p>
+              <footer>
+                <span className="hp-review-photo"><img src={r.photo} alt="" loading="lazy" /></span>
+                <span className="hp-review-who">
+                  <strong>{r.name}</strong>
+                  <span>{r.meta}</span>
+                </span>
+              </footer>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Closing ── */}
+      <section className="hp-cta">
+        <h2>Ne vedem la sală</h2>
+        <p>Vespucci Beach, lângă faleză. Ușa e deschisă la orice oră.</p>
+        <button className="hp-btn hp-btn-solid hp-btn-lg" onClick={onEnter}>Intră pe site</button>
+      </section>
+
+      <footer className="hp-footer">
+        <span>© 2025 – 2026 · Aldrick Enterprise · Sala Sport</span>
+        <span>Artwork &amp; design © sebastian.0115</span>
+      </footer>
+    </div>
+  );
+}
+
 // ─── Visitor Entry Gate ───────────────────────────────────────────────────────
 // Full-bleed artwork (public/entry-bg.png) with frosted-glass controls. The
 // artwork already carries the wordmark, so no logo or title is drawn here.
-function EntryGate({ onEnter, onOpenLogin, theme, onToggleTheme }) {
+function EntryGate({ onEnter, onOpenLogin, onBack, theme, onToggleTheme }) {
   const [nickname, setNickname] = useState("");
   const submit = () => { if (nickname.trim()) onEnter(nickname.trim()); };
   return (
@@ -275,6 +464,9 @@ function EntryGate({ onEnter, onOpenLogin, theme, onToggleTheme }) {
       <div className="ev-gate-corner">
         <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
+      {onBack && (
+        <button className="ev-glass ev-gate-back" onClick={onBack}>← Înapoi</button>
+      )}
 
       <div className="ev-gate-inner">
         <h1 className="ev-gate-title">Introdu un nickname pentru a intra ca vizitator</h1>
@@ -2574,6 +2766,8 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [theme, toggleTheme] = useTheme();
+  // Visitors land on the public homepage; the nickname gate is one click in.
+  const [showGate, setShowGate] = useState(false);
 
   const isGeneralAdmin = userRole === "general_admin";
   const isAdmin2 = userRole === "admin2";
@@ -2739,7 +2933,11 @@ export default function App() {
   if (!userRole) return (
     <>
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLogin={login} onLoginAccount={loginAccount} />}
-      <EntryGate onEnter={enterAsVisitor} onOpenLogin={() => setShowLogin(true)} theme={theme} onToggleTheme={toggleTheme} />
+      {showGate
+        ? <EntryGate onEnter={enterAsVisitor} onOpenLogin={() => setShowLogin(true)}
+                     onBack={() => setShowGate(false)} theme={theme} onToggleTheme={toggleTheme} />
+        : <Homepage onEnter={() => setShowGate(true)} onOpenLogin={() => setShowLogin(true)}
+                    theme={theme} onToggleTheme={toggleTheme} />}
     </>
   );
 

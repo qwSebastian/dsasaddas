@@ -577,3 +577,217 @@ body { color: var(--text); }
 @media (max-width: 640px) {
   .ev-gate-credit { font-size: 10px; bottom: 10px; right: 10px; left: 10px; text-align: center; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   PUBLIC HOMEPAGE
+   The gym's shop window, in front of the roster. It borrows the
+   entry gate's world — dark violet ground, gold accent, condensed
+   caps — but reads as a business page rather than a login screen,
+   so it uses the theme tokens and follows light/dark like the app.
+   ════════════════════════════════════════════════════════════════ */
+.hp {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Barlow', system-ui, sans-serif;
+}
+
+/* ── Top bar ── */
+.hp-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 10px 22px;
+  background: var(--nav-bg);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border);
+}
+.hp-nav-brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.hp-nav-brand img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+.hp-nav-brand strong {
+  display: block; font-family: 'Cinzel', serif; font-weight: 700;
+  font-size: 14px; letter-spacing: 0.10em; color: var(--gold);
+  white-space: nowrap;
+}
+.hp-nav-brand span {
+  display: block; font-size: 10.5px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-dim); white-space: nowrap;
+}
+.hp-nav-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* ── Buttons ── */
+.hp-btn {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 13px; letter-spacing: 0.10em; text-transform: uppercase;
+  padding: 9px 18px; border-radius: 7px; cursor: pointer;
+  transition: background 0.16s, border-color 0.16s, color 0.16s, transform 0.1s;
+  white-space: nowrap;
+}
+.hp-btn:active { transform: scale(0.98); }
+.hp-btn-lg { padding: 13px 26px; font-size: 15px; }
+.hp-btn-solid { background: var(--gold); border: 1px solid var(--gold); color: var(--on-gold); }
+.hp-btn-solid:hover { filter: brightness(1.08); }
+.hp-btn-ghost { background: transparent; border: 1px solid var(--border-strong); color: var(--text); }
+.hp-btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── Hero ── */
+.hp-hero {
+  position: relative;
+  min-height: min(76vh, 620px);
+  display: flex; align-items: flex-end;
+  padding: 64px 22px 44px;
+  background-color: var(--bg-deep);
+  background-image:
+    linear-gradient(180deg, rgba(8,5,16,0.55) 0%, rgba(8,5,16,0.72) 55%, var(--bg) 100%),
+    url('/gym/hero.jpg');
+  background-size: cover, cover;
+  background-position: center, center 38%;
+}
+.hp-hero-inner { width: 100%; max-width: 1120px; margin: 0 auto; }
+.hp-eyebrow {
+  display: block; font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 13px; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 8px;
+}
+.hp-hero h1 {
+  font-family: 'Cinzel', serif; font-weight: 800;
+  font-size: clamp(38px, 7vw, 84px); line-height: 0.98; letter-spacing: 0.03em;
+  color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,0.6); margin: 0 0 14px;
+}
+.hp-lead {
+  max-width: 46ch; font-size: clamp(15px, 1.5vw, 18px); line-height: 1.62;
+  color: rgba(255,255,255,0.86); text-shadow: 0 1px 12px rgba(0,0,0,0.7); margin: 0 0 26px;
+}
+.hp-hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 34px; }
+
+.hp-facts { display: flex; gap: 34px; flex-wrap: wrap; margin: 0; }
+.hp-facts dt {
+  font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: rgba(255,255,255,0.55); margin-bottom: 3px;
+}
+.hp-facts dd {
+  margin: 0; font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 19px; color: #fff;
+}
+
+/* ── Sections ── */
+.hp-section { max-width: 1120px; margin: 0 auto; padding: 68px 22px; }
+.hp-section-alt { max-width: none; background: var(--surface-1); border-block: 1px solid var(--border); }
+.hp-section-alt > * { max-width: 1120px; margin-inline: auto; }
+
+.hp-head { margin-bottom: 30px; }
+.hp-head h2 {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: clamp(24px, 3.2vw, 36px); letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text); margin: 0 0 6px;
+}
+.hp-head p { margin: 0; color: var(--text-dim); font-size: 15px; }
+
+/* ── Facility cards ── */
+.hp-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(min(290px, 100%), 1fr));
+}
+.hp-card {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+}
+.hp-card:hover { border-color: var(--border-gold); transform: translateY(-3px); box-shadow: var(--shadow-raised); }
+.hp-card-img { aspect-ratio: 16 / 9; overflow: hidden; background: var(--surface-3); }
+.hp-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hp-card h3 {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 19px;
+  letter-spacing: 0.04em; color: var(--gold); margin: 16px 18px 5px;
+}
+.hp-card p { margin: 0 18px 18px; font-size: 14px; line-height: 1.6; color: var(--text-muted); }
+
+/* ── Reception band ── */
+.hp-band {
+  display: grid; gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  background: var(--surface-1);
+  border-block: 1px solid var(--border);
+}
+.hp-band-img { min-height: 260px; }
+.hp-band-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hp-band-text { padding: 44px 30px; align-self: center; max-width: 620px; }
+.hp-band-text h2 {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: clamp(22px, 2.8vw, 32px); letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text); margin: 0 0 12px;
+}
+.hp-band-text p { margin: 0 0 12px; font-size: 15px; line-height: 1.68; color: var(--text-muted); max-width: 52ch; }
+.hp-band-text .hp-muted { color: var(--text-dim); font-size: 14px; }
+.hp-band-text .hp-btn { margin-top: 10px; }
+
+/* ── Team ── */
+.hp-team {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+}
+.hp-member { margin: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.hp-member-img { aspect-ratio: 3 / 4; background: var(--surface-3); }
+.hp-member-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hp-member figcaption { padding: 12px 14px; }
+.hp-member strong {
+  display: block; font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: 16px; color: var(--text); margin-bottom: 2px;
+}
+.hp-member span { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold-dim); }
+.hp-empty { color: var(--text-dim); font-size: 14px; }
+
+/* ── Reviews ── */
+.hp-reviews {
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+}
+.hp-review {
+  display: flex; flex-direction: column; gap: 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+}
+.hp-stars { color: var(--gold); font-size: 15px; letter-spacing: 0.14em; }
+.hp-review > p { margin: 0; flex: 1; font-size: 14.5px; line-height: 1.66; color: var(--text-muted); }
+.hp-review footer { display: flex; align-items: center; gap: 11px; }
+.hp-review-photo {
+  width: 42px; height: 42px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  border: 1px solid var(--border-strong); background: var(--surface-3);
+}
+.hp-review-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hp-review-who strong { display: block; font-size: 13.5px; font-weight: 600; color: var(--text); }
+.hp-review-who span { font-size: 11.5px; color: var(--text-dim); }
+
+/* ── Closing ── */
+.hp-cta { text-align: center; padding: 76px 22px; }
+.hp-cta h2 {
+  font-family: 'Cinzel', serif; font-weight: 700;
+  font-size: clamp(24px, 3.4vw, 40px); letter-spacing: 0.06em;
+  color: var(--gold); margin: 0 0 10px;
+}
+.hp-cta p { margin: 0 0 24px; color: var(--text-dim); font-size: 15px; }
+
+.hp-footer {
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 20px 22px; border-top: 1px solid var(--border);
+  background: var(--footer-bg); font-size: 12px; color: var(--text-dim);
+}
+
+/* ── Back to homepage, on the entry gate ── */
+.ev-gate-back {
+  position: absolute; top: 14px; left: 14px; z-index: 2;
+  padding: 7px 13px; font-size: 12px; cursor: pointer; border-radius: 10px;
+}
+.ev-gate-back:hover { background: rgba(255,255,255,0.24); }
+
+@media (max-width: 640px) {
+  .hp-nav { padding: 9px 12px; gap: 8px; }
+  .hp-nav-brand span { display: none; }
+  .hp-nav-right .hp-btn-ghost { display: none; }
+  .hp-btn { padding: 8px 13px; font-size: 12px; }
+  .hp-hero { min-height: 70vh; padding: 40px 16px 34px; }
+  .hp-facts { gap: 20px; }
+  .hp-section { padding: 46px 16px; }
+  .hp-band-text { padding: 32px 18px; }
+  .hp-cta { padding: 54px 16px; }
+  .hp-footer { flex-direction: column; gap: 4px; text-align: center; }
+}
