@@ -1,7 +1,15 @@
 -- ══════════════════════════════════════════════════════════════
 -- ALDRICK ENTERPRISES — FULL FRESH SETUP for a brand-new Supabase project
 -- Run this ONCE in the SQL Editor of your NEW Supabase project.
--- Safe to re-run (idempotent).
+-- Safe to re-run (idempotent) — but see the warning below.
+--
+-- ⚠ ORDER MATTERS. This file creates permissive starter policies on
+--   `members` (INSERT/UPDATE/DELETE with `true`), which
+--   20260706_session_tokens_hardening.sql then replaces with
+--   authenticated-only ones. Re-running THIS file after the hardening
+--   migration recreates the permissive policies and re-opens roster
+--   writes to anyone holding the publishable key.
+--   If you re-run this file, ALWAYS re-run the hardening file after it.
 -- ══════════════════════════════════════════════════════════════
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
