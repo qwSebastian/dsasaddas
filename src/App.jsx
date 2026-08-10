@@ -140,6 +140,13 @@ const STATUS_OPTIONS = ["Activ","Inactiv"];
 const TASK_OPTIONS = ["Platit","Neplatit","Scutit"];
 const STATUS_COLORS = { Activ:{bg:"var(--success-bg)",text:"var(--success)",border:"var(--success)"}, Inactiv:{bg:"var(--surface-hover)",text:"var(--danger)",border:"var(--danger)"} };
 const TASK_COLORS = { Platit:{bg:"var(--info-bg)",text:"var(--info)",border:"var(--info)"}, Neplatit:{bg:"var(--surface-3)",text:"var(--warn)",border:"var(--warn)"}, Scutit:{bg:"var(--surface-3)",text:"var(--gold-dim)",border:"var(--gold)"} };
+// Badge per admin_logs.kind. Anything unrecognised falls back to Admin.
+const LOG_KINDS = {
+  visit: { label:"Vizită", color:"var(--gold-dim)", bg:"var(--surface-hover)", border:"var(--border)" },
+  auth:  { label:"Cont",   color:"var(--success)",  bg:"var(--success-bg)",    border:"var(--success-border)" },
+  admin: { label:"Admin",  color:"var(--info)",     bg:"var(--info-bg)",       border:"var(--info-border)" },
+};
+
 const LICENSE_DEFS = [
   { key:"hs_driver",   label:"HS DRIVER" },
   { key:"pilot_heli",  label:"PILOT HELI" },
@@ -2423,7 +2430,7 @@ function AdminPanelSection({ role, currentUser }) {
                     {new Date(log.created_at).toLocaleDateString("ro-RO")} {new Date(log.created_at).toLocaleTimeString("ro-RO", { hour:"2-digit", minute:"2-digit" })}
                   </div>
                   <div style={{ flexShrink:0, minWidth:160, display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontSize:8.5, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", padding:"1px 6px", borderRadius:4, textTransform:"uppercase", color: log.kind==="visit"?"var(--gold-dim)":"var(--info)", background: log.kind==="visit"?"var(--surface-hover)":"var(--info-bg)", border:`1px solid ${log.kind==="visit"?"var(--border)":"var(--info-border)"}` }}>{log.kind==="visit"?"Vizită":"Admin"}</span>
+                    <span style={{ fontSize:8.5, fontFamily:"'Barlow', sans-serif", fontWeight:700, letterSpacing:"0.06em", padding:"1px 6px", borderRadius:4, textTransform:"uppercase", color: LOG_KINDS[log.kind]?.color || LOG_KINDS.admin.color, background: LOG_KINDS[log.kind]?.bg || LOG_KINDS.admin.bg, border:`1px solid ${LOG_KINDS[log.kind]?.border || LOG_KINDS.admin.border}` }}>{LOG_KINDS[log.kind]?.label || LOG_KINDS.admin.label}</span>
                     <span style={{ color:"var(--text-dim)", fontFamily:"'Barlow', sans-serif", fontSize:11 }}>{log.actor_email}</span>
                   </div>
                   <div style={{ flex:1, display:"flex", flexDirection:"column", gap:2, minWidth:180 }}>
@@ -2505,6 +2512,7 @@ export default function App() {
     _actorDisplayName = displayName;
     setCurrentUser({ id: user.id, email: user.email, nickname: data?.nickname || null });
     setUserRole(data?.role || null);
+    return data?.role || null;
   };
 
   useEffect(() => {
@@ -2574,10 +2582,15 @@ export default function App() {
 
   const login = async (email, password) => {
     const { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error && session?.user) {
-      await fetchUserRole(session.user);
-      setShowLogin(false);
+    if (error || !session?.user) {
+      logAction("Autentificare eșuată", `${email} (email)`, "auth");
+      return error;
     }
+    const role = await fetchUserRole(session.user);
+    setShowLogin(false);
+    // Logging the resolved role also surfaces the "signed in but no row in
+    // user_roles" case, which otherwise just looks like a silent bounce.
+    logAction("Autentificat", `${session.user.email} (${role || "fără rol"})`, "auth");
     return error;
   };
 
@@ -2585,7 +2598,10 @@ export default function App() {
     // Server-issued session token: verifies credentials and mints a short-lived token.
     const { data, error } = await supabase.rpc("login_account", { p_nickname: nickname, p_password: password });
     const session = Array.isArray(data) ? data[0] : data;
-    if (error || !session?.token || !session?.role) return { message: "Nickname sau parolă incorectă." };
+    if (error || !session?.token || !session?.role) {
+      logAction("Autentificare eșuată", `${nickname} (nickname)`, "auth");
+      return { message: "Nickname sau parolă incorectă." };
+    }
     const { role, token } = session;
     localStorage.setItem("ev_account_session", JSON.stringify({ nickname, role, token }));
     localStorage.removeItem("ev_visitor");
@@ -2595,7 +2611,7 @@ export default function App() {
     setUserRole(role);
     setCurrentUser({ nickname });
     setShowLogin(false);
-    logAction("Autentificat", `${nickname} (${role})`);
+    logAction("Autentificat", `${nickname} (${role})`, "auth");
     return null;
   };
 
@@ -2609,7 +2625,10 @@ export default function App() {
   };
 
   const logout = async () => {
-    logAction("Deconectat", currentUser?.nickname || currentUser?.email || "");
+    const who = currentUser?.nickname || currentUser?.email || "";
+    // Was defaulting to kind "admin", which badged a departing visitor as an
+    // admin action — the reason visitor nicknames showed up under ADMIN.
+    logAction("Deconectat", `${who} (${userRole || "necunoscut"})`, isVisitor ? "visit" : "auth");
     if (_accountToken) await supabase.rpc("logout_account", { p_token: _accountToken });
     localStorage.removeItem("ev_account_session");
     localStorage.removeItem("ev_visitor");
