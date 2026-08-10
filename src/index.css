@@ -791,3 +791,35 @@ body { color: var(--text); }
   .hp-cta { padding: 54px 16px; }
   .hp-footer { flex-direction: column; gap: 4px; text-align: center; }
 }
+
+/* ── Access rules panel ── */
+.hp-rules {
+  display: grid; gap: 26px;
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  align-items: start;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 12px; padding: 30px 30px 30px 27px;
+}
+.hp-rules-head h2 {
+  font-family: 'Rajdhani', sans-serif; font-weight: 700;
+  font-size: clamp(21px, 2.6vw, 28px); letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--text); margin: 0 0 6px;
+}
+.hp-rules-head p { margin: 0; color: var(--text-dim); font-size: 14px; max-width: 34ch; }
+.hp-rules-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.hp-rules-list li {
+  display: flex; align-items: flex-start; gap: 11px;
+  font-size: 14.5px; line-height: 1.55; color: var(--text-muted);
+}
+.hp-rules-list li span {
+  flex-shrink: 0; width: 21px; height: 21px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 12px; font-weight: 700;
+  margin-top: 1px;
+}
+.hp-rules-list li.is-no span { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger-border); }
+.hp-rules-list li.is-ok span { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+
+@media (max-width: 640px) {
+  .hp-rules { padding: 22px 18px 22px 16px; gap: 18px; }
+}

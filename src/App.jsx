@@ -275,6 +275,15 @@ const GYM_FACILITIES = [
   { img: "/gym/exterior.jpg", title: "Zonă exterioară",  text: "Antrenament afară, pe faleză. La răsărit sau la trei dimineața, e deschis." },
   { img: "/gym/vestiare.jpg", title: "Vestiare",         text: "Dulapuri cu cheie, dușuri cu apă caldă și prosop curat la intrare." },
   { img: "/gym/hol.jpg",      title: "Non-stop",         text: "Ușile nu se închid. Vii când ai timp, nu când are sala program." },
+  { img: "/gym/receptie.jpg", title: "Îndrumare gratuită", text: "Ești la prima sală din viața ta? Un antrenor îți arată aparatele și îți face un program. Nu costă nimic." },
+];
+
+// Access rules, shown as a panel. `ok: false` renders as a restriction.
+const GYM_RULES = [
+  { ok: false, text: "Fără cască pe cap. Ți-o lași în vestiar sau pe motor." },
+  { ok: false, text: "Fără mască sau față acoperită. Vrem să știm cine se antrenează la noi." },
+  { ok: false, text: "Fără blugi, bocanci sau haine de stradă. Nu te antrenezi în ce ai venit din oraș." },
+  { ok: true,  text: "Ținută de sport și adidași. Atât îți trebuie ca să intri." },
 ];
 
 const GYM_REVIEWS = [
@@ -351,7 +360,7 @@ function Homepage({ onEnter, onOpenLogin, theme, onToggleTheme }) {
           <dl className="hp-facts">
             <div><dt>Program</dt><dd>Non-stop</dd></div>
             <div><dt>Locație</dt><dd>Vespucci Beach</dd></div>
-            <div><dt>Prima ședință</dt><dd>Gratis</dd></div>
+            <div><dt>Abonament</dt><dd>2.000$ / lună</dd></div>
           </dl>
         </div>
       </section>
@@ -379,14 +388,37 @@ function Homepage({ onEnter, onOpenLogin, theme, onToggleTheme }) {
         <div className="hp-band-text">
           <h2>Treci pe la recepție</h2>
           <p>
-            Prima ședință e din partea casei. Vii, îți arătăm sala, îți facem
-            fișa și te apuci de treabă în aceeași zi.
+            Abonamentul e <strong>2.000$ pe lună</strong> și îți dă acces la
+            toată sala, la orice oră. Vii, îți facem fișa și te apuci de treabă
+            în aceeași zi.
+          </p>
+          <p>
+            Dacă e primul tău antrenament, te ia unul dintre antrenori, îți
+            arată aparatele și îți face un program. Nu plătești nimic în plus
+            pentru asta.
           </p>
           <p className="hp-muted">
-            Fără abonament pe un an, fără contract de zece pagini. Plătești luna
-            în care vii.
+            Fără contract pe un an. Plătești luna în care vii.
           </p>
           <button className="hp-btn hp-btn-solid" onClick={onEnter}>Acces membri</button>
+        </div>
+      </section>
+
+      {/* ── Access rules ── */}
+      <section className="hp-section">
+        <div className="hp-rules">
+          <div className="hp-rules-head">
+            <h2>Reguli de acces</h2>
+            <p>Scurte și nenegociabile. Cine nu le respectă e condus afară.</p>
+          </div>
+          <ul className="hp-rules-list">
+            {GYM_RULES.map(r => (
+              <li key={r.text} className={r.ok ? "is-ok" : "is-no"}>
+                <span aria-hidden="true">{r.ok ? "✓" : "✕"}</span>
+                {r.text}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
